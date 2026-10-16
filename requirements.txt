@@ -7,9 +7,15 @@ torch>=2.4
 torchvision>=0.19
 
 # Dataset: official Camelyon17-WILDS loader, splits and evaluator.
-# Note: the WILDS README lists torch-scatter / torch-geometric, but they are
-# not declared by the package and are only used by graph datasets (not here).
+# torch-scatter / torch-geometric are not installed by pip (not declared by the
+# package). The evaluator needs one torch-scatter function: src/wilds_compat.py
+# provides it with native PyTorch, so no compilation is needed.
 wilds==2.0.0
+
+# Data download (src/prepare_data.py): the official CodaLab server is
+# unreachable, so the data comes from a pinned Hugging Face copy (parquet).
+huggingface_hub>=0.25
+pyarrow>=16
 
 # Data, metrics, figures
 numpy>=1.26
@@ -19,5 +25,6 @@ matplotlib>=3.9
 pyyaml>=6.0
 tqdm>=4.66
 
-# Notebooks
+# Notebooks and tests
 ipykernel>=6.29
+pytest>=8

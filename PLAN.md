@@ -24,9 +24,10 @@ On veut aussi savoir **quand le modèle doit s'abstenir** (renvoyer au pathologi
 | Coût de référence | ~2 h par entraînement complet sur GPU V100 | README WILDS |
 | Variance | les auteurs préviennent : forte variabilité du test selon la graine | README WILDS |
 
-**Dépendances** : `torch-scatter` / `torch-geometric` sont listés dans le README WILDS mais **ne sont pas déclarés** par le paquet (vérifié sur PyPI). `pip install wilds` ne les installe pas, et ils ne servent qu'aux jeux de données de graphes. Testé : `wilds` 2.0.0 s'installe et s'importe avec torch 2.14, numpy 2.5, pandas 3.0 sous Python 3.12.
+**Dépendances** : `torch-scatter` / `torch-geometric` sont listés dans le README WILDS mais **ne sont pas déclarés** par le paquet (vérifié sur PyPI) : `pip install wilds` ne les installe pas. `wilds` 2.0.0 s'installe et s'importe avec torch 2.14, numpy 2.5, pandas 3.0 sous Python 3.12.
+*Correction (phase 1)* : contrairement à ce que j'avais écrit en phase 0, l'**évaluateur officiel** a besoin de `torch_scatter` (une seule fonction : moyenne par lame). Pas de version précompilée pour macOS ⇒ `src/wilds_compat.py` fournit cette fonction en PyTorch natif. Testé : résultats identiques à un calcul pandas indépendant.
 
-**Problème découvert** : le serveur officiel de téléchargement (CodaLab) a un **certificat TLS expiré depuis le 7 octobre 2026** ; le téléchargement automatique de `wilds` échouera tant que ce n'est pas corrigé. Il existe des copies sur Hugging Face (la plus utilisée : `wltjr1007/Camelyon17-WILDS`, au format parquet, 10,7 Go) dont il faudra vérifier le contenu (mêmes patches, mêmes métadonnées hôpital/lame). Décision en phase 1.
+**Source des données** : le serveur officiel (CodaLab) a un **certificat TLS expiré depuis le 7 octobre 2026**. On utilise la copie Hugging Face `wltjr1007/Camelyon17-WILDS` épinglée au commit `d784d534`, reconvertie au format officiel par `src/prepare_data.py`, puis vérifiée contre l'article (effectifs par split, 10 lames par hôpital, pas de lame partagée entre train et val/test). La provenance est enregistrée dans `results/data_provenance.json`. L'article confirme aussi que `id_val` vient **des mêmes 30 lames** que le train.
 
 ## 3. Règles de rigueur (rappel permanent)
 

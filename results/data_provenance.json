@@ -1,0 +1,14 @@
+{
+  "source": "https://huggingface.co/datasets/wltjr1007/Camelyon17-WILDS",
+  "revision": "d784d5344ba6c967f83f9f3d9b2f1e2a4d6eb78f",
+  "official_source": "https://worksheets.codalab.org (WILDS v1.0, unreachable: expired TLS certificate)",
+  "checked_on": "2026-10-17",
+  "passed": true,
+  "split_sizes": {
+    "train": 302436,
+    "id_val": 33560,
+    "val": 34904,
+    "test": 85054
+  },
+  "n_patches": 455954
+}
