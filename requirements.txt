@@ -1,0 +1,23 @@
+# Minimum versions needed by the project. Packages are added phase by phase,
+# only when the code starts using them. The exact versions used to produce
+# the numbers in results/ are frozen in requirements-lock.txt.
+
+# Deep learning
+torch>=2.4
+torchvision>=0.19
+
+# Dataset: official Camelyon17-WILDS loader, splits and evaluator.
+# Note: the WILDS README lists torch-scatter / torch-geometric, but they are
+# not declared by the package and are only used by graph datasets (not here).
+wilds==2.0.0
+
+# Data, metrics, figures
+numpy>=1.26
+pandas>=2.2
+scikit-learn>=1.5
+matplotlib>=3.9
+pyyaml>=6.0
+tqdm>=4.66
+
+# Notebooks
+ipykernel>=6.29
