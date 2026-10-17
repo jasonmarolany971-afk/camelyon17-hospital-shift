@@ -93,12 +93,21 @@ En phase 0, j'avais conclu à partir de la documentation que `torch-scatter` ét
 a montré le contraire. La correction : un module de remplacement minimal (`src/wilds_compat.py`) et un test qui
 compare son résultat à un calcul indépendant. Le README d'un paquet décrit l'intention ; seul le code exécuté fait foi.
 
-**4. L'unité d'indépendance est la lame, pas le patch.**
+**4. L'unité d'indépendance : le patient, pas le patch.**
 Deux patches voisins d'une même lame se ressemblent presque comme deux photos du même objet. Si une lame est des
 deux côtés d'un découpage, on mesure en partie de la mémorisation. Ici, `id_val` partage ses 30 lames avec le train :
-il est optimiste. Pour toute validation croisée, il faut des **folds groupés par lame** (`GroupKFold`).
-Démonstration chiffrée : le « détecteur d'hôpital » fait 76,5 % ± 1,3 % avec des folds par patch, et 71,3 % ± 13,7 %
-avec des folds par lame. La fuite gonfle le score **et** fait croire à une stabilité qui n'existe pas.
+il est optimiste. Un niveau plus haut, les 50 lames viennent de 43 patients (6 patients ont 2 ou 3 ganglions) :
+l'unité la plus stricte est donc le **patient**. Pour toute validation croisée : **folds groupés par patient**
+(`GroupKFold`, `StratifiedGroupKFold`).
+Démonstration chiffrée avec le « détecteur d'hôpital » : 76,5 % ± 1,3 % avec des folds par patch, 71,3 % ± 13,7 %
+par lame, 70,5 % ± 10,8 % par patient. La fuite gonfle le score **et** fait croire à une stabilité qui n'existe pas.
+
+*Pourquoi l'écart-type grandit-il ?* Il reflète le nombre d'unités **indépendantes** dans chaque fold de test.
+Avec des folds par patch, chaque fold contient environ 2 000 patches tirés des 50 lames : tous les folds se ressemblent,
+donc les scores aussi. Avec des folds par patient, chaque fold ne contient que 8 ou 9 patients : le score dépend de
+*quels* patients y tombent, et les patients diffèrent beaucoup entre eux. Le grand écart-type n'est pas un défaut de
+la méthode, c'est l'incertitude réelle quand on ne dispose que de 43 patients. Avec 5 folds seulement, l'écart-type
+est lui-même imprécis : 13,7 contre 10,8 ne se compare pas, 1,3 contre ~11 oui.
 
 **5. Le nombre réel d'exemples indépendants.**
 455 954 patches, mais dans les hôpitaux H3 et H4, 2 lames fournissent plus de 90 % des patches tumoraux.
@@ -133,13 +142,15 @@ après avoir vu le test.
 > sans ré-encodage, et la provenance est enregistrée dans le dépôt. Limite : sans somme de contrôle officielle, je ne
 > peux pas prouver l'identité au pixel près ; si le serveur officiel revient, je comparerai les métadonnées.
 
-**Q2. Pourquoi grouper la validation croisée par lame ? Qu'observe-t-on sinon ?**
-*(EN: Why group cross-validation by slide? What happens if you don't?)*
+**Q2. Pourquoi grouper la validation croisée par patient ? Qu'observe-t-on sinon ?**
+*(EN: Why group cross-validation by patient? What happens if you don't?)*
 
-> Les patches d'une même lame sont très corrélés. Si une lame est à la fois dans l'entraînement et l'évaluation, le
-> modèle est en partie évalué sur ce qu'il a déjà vu. Dans mon exploration, un classifieur qui prédit l'hôpital à partir
-> de la couleur obtient 76,5 % ± 1,3 % avec des folds par patch et 71,3 % ± 13,7 % avec des folds par lame : la fuite
-> gonfle le score de 5 points et divise l'écart-type par dix, ce qui donne une fausse impression de stabilité.
+> Les patches d'une même lame, et les lames d'un même patient, sont corrélés. Si un patient est à la fois dans
+> l'entraînement et l'évaluation, le modèle est en partie évalué sur ce qu'il a déjà vu. Dans mon exploration, un
+> classifieur qui prédit l'hôpital à partir de la couleur obtient 76,5 % ± 1,3 % avec des folds par patch,
+> 71,3 % ± 13,7 % par lame et 70,5 % ± 10,8 % par patient. La fuite gonfle le score d'environ 6 points et rend
+> l'écart-type presque dix fois trop petit : une fausse impression de stabilité. Le chiffre à rapporter est celui
+> groupé par patient, parce qu'en pratique le modèle sera appliqué à de nouveaux patients.
 
 **Q3. Comment montrez-vous que la différence de couleur entre hôpitaux est réelle, et pas un effet du contenu des images ?**
 *(EN: How do you show the color difference between hospitals is real, not an effect of image content?)*
@@ -147,5 +158,6 @@ après avoir vu le test.
 > Trois précautions : un échantillon équilibré tumeur / non-tumeur par hôpital, des statistiques calculées sur les seuls
 > pixels de tissu (seuil de densité optique), et une décomposition en hématoxyline / éosine. Résultat : la moitié centrale
 > des patches de l'hôpital de test a une concentration d'éosine entièrement au-dessus de celle de chaque hôpital
-> d'entraînement, et 5 nombres de couleur suffisent à reconnaître l'hôpital dans 71 % des cas contre 20 % au hasard.
+> d'entraînement, et 5 nombres de couleur suffisent à reconnaître l'hôpital dans 70,5 % des cas contre 20 % au hasard
+> (validation croisée groupée par patient).
 > Limite : la matrice de colorants de `rgb2hed` est générique ; les valeurs sont comparables entre hôpitaux, pas absolues.
