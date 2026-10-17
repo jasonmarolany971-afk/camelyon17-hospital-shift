@@ -1,0 +1,16 @@
+{
+  "device": "mps (arm64)",
+  "cpu_cores": 10,
+  "num_workers": 4,
+  "batch_size": 32,
+  "torch": "2.14.1",
+  "data_images_per_s": 6128.048460473282,
+  "train_compute_images_per_s_fp32": 224.47228013722318,
+  "inference_images_per_s_fp32": 857.7972266137135,
+  "end_to_end_images_per_s_fp32": 221.7948000148671,
+  "estimate_fp32": {
+    "epoch_minutes": 24.05664088567509,
+    "run_hours": 4.059153398676793,
+    "hours_for_9_runs": 36.53238058809114
+  }
+}
