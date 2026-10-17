@@ -247,3 +247,86 @@ continuer à sélectionner sur la validation ?**
 > commit du code et versions enregistrés dans chaque run. Mais certaines opérations GPU ne sont pas déterministes :
 > deux exécutions de la même graine ont divergé. La reproductibilité est donc statistique : plusieurs graines, moyenne
 > ± écart-type et toutes les valeurs. L'évaluation, elle, est identique à 6 décimales entre Kaggle et mon Mac.
+
+---
+
+## Phase 3 — Caractéristiques figées et classifieurs linéaires
+
+### Concepts clés
+
+**1. Modèle de fondation, caractéristiques figées, *linear probe*.**
+Un modèle de fondation est un grand réseau pré-entraîné sur des millions d'images, sans étiquettes (apprentissage
+auto-supervisé : DINO, iBOT). On le **gèle** : chaque patch devient un vecteur de 768 nombres (le jeton `[CLS]`), calculé
+une seule fois. On n'entraîne qu'une couche linéaire au-dessus (768 × 2 + 2 = 1 538 paramètres, contre environ 7 millions
+pour le DenseNet). C'est le *linear probe* : il mesure ce que les caractéristiques contiennent déjà.
+
+**2. Le résultat central.**
+Sur l'hôpital de test, avec le même protocole que le CNN (SGD, 10 époques, époque et seuil choisis sur `val`) :
+CNN entraîné de zéro 66,1 % ± 14,9 ; ViT figé ImageNet (DINO) 92,1 % ± 0,3 ; ViT figé histologie (Phikon) 93,9 % ± 0,8
+(`results/tables/comparison.csv`). La variance entre graines s'effondre : le problème linéaire est convexe, il n'y a
+presque plus d'instabilité d'entraînement.
+
+**3. Pourquoi ça généralise mieux (interprétation).**
+Un CNN entraîné de zéro sur 30 lames apprend tout ce qui sépare les classes dans les hôpitaux d'entraînement, y compris
+les indices propres à ces hôpitaux (coloration, scanner) : il a des millions de paramètres libres pour les exploiter.
+Un réseau pré-entraîné sur des données très variées fournit des caractéristiques plus générales (formes, textures,
+noyaux), et une couche linéaire de 1 538 paramètres a peu de liberté pour s'accrocher à des indices subtils. Les
+probabilités sont aussi bien plus stables d'un hôpital à l'autre : part de patches déclarés « tumeur » entre 45 et 55 %
+partout (vraie part 50 %), contre 1 à 57 % pour le CNN.
+
+**4. Ce que la comparaison ne permet pas de séparer.**
+CNN contre têtes linéaires mélange trois différences : l'architecture (DenseNet contre ViT), le pré-entraînement et le
+gel des poids. Pour les séparer, il faudrait par exemple affiner (*fine-tuner*) un ViT pré-entraîné, ou entraîner un ViT
+de zéro. En revanche, **DINO contre Phikon isole les données de pré-entraînement** : même architecture, même famille
+d'apprentissage auto-supervisé, même prétraitement.
+
+**5. Histologie contre ImageNet : un avantage net à la maison, mince sur l'hôpital difficile.**
+Phikon fait mieux en distribution (99,0 % contre 97,4 %) et sur l'hôpital 1 (97,1 % contre 92,0 %). Sur l'hôpital 2, la
+précision diffère de 1,8 point (93,9 contre 92,1), mais **l'AUC est identique (0,986)** : les deux classent aussi bien,
+l'écart vient du seuil (Phikon déclare « tumeur » pour 45,5 % des patches, DINO pour 55,2 %). L'essentiel du gain par
+rapport au CNN vient donc du pré-entraînement à grande échelle et du gel, pas spécifiquement de l'histologie.
+
+**6. Ce que les graines mesurent, et ce qu'elles ne mesurent pas.**
+Pour une tête linéaire, la graine ne change que l'initialisation et l'ordre des batchs : écart-type inférieur à 1 point.
+Elle ne mesure pas l'incertitude liée au **choix des patients** dans l'hôpital de test (10 lames seulement). Pour affirmer
+que Phikon bat DINO sur le test, il faudrait un intervalle de confiance par rééchantillonnage des lames ou des patients
+(*bootstrap*) : c'est une limite, à traiter en phase 5.
+
+**7. Vérifier une extraction de caractéristiques.**
+Versions des modèles épinglées ; prétraitement identique à celui du modèle (écart de 2,4e-7 avec le préprocesseur
+Hugging Face) ; fp16 contre fp32 (similarité cosinus ≥ 0,99998) ; lignes réalignées par les index sauvegardés ;
+effectifs comparés à l'article ; commit du code dans `meta.json`. Et la question de la **contamination** : Phikon a été
+pré-entraîné sur TCGA, pas sur Camelyon, donc pas de fuite connue vers notre test.
+
+**8. Le piège des axes automatiques.**
+Sur la figure des courbes de Phikon, `val` varie entre 96,4 et 97,1 % : l'axe automatique fait paraître ces variations
+aussi fortes que celles du CNN (74 à 89 %), vingt fois plus grandes. Pour comparer des méthodes, une même échelle pour
+toutes (`results/figures/comparison.png`).
+
+### Questions d'entretien
+
+**Q1. Pourquoi un modèle pré-entraîné figé avec une couche linéaire généralise-t-il mieux à un nouvel hôpital qu'un CNN
+entraîné de bout en bout ?**
+*(EN: Why does a frozen pretrained model with a linear head generalize better to a new hospital than an end-to-end CNN?)*
+
+> Le CNN, entraîné de zéro sur 30 lames, a des millions de paramètres pour exploiter tout ce qui sépare les classes dans
+> les hôpitaux d'entraînement, y compris la coloration propre à ces hôpitaux. Le réseau figé a appris sur des millions
+> d'images variées des caractéristiques plus générales, et la tête linéaire n'a que 1 538 paramètres. Résultat sur
+> l'hôpital de test : 92 à 94 % contre 66 %, et un écart-type entre graines inférieur à 1 point contre 15. Limite : ma
+> comparaison mélange architecture, pré-entraînement et gel ; il faudrait affiner un ViT pré-entraîné pour les séparer.
+
+**Q2. Un modèle de fondation spécialisé en histologie est-il meilleur qu'un modèle ImageNet ici ?**
+*(EN: Is a histology foundation model better than an ImageNet model here?)*
+
+> En distribution et sur l'hôpital de validation, oui : 99,0 % contre 97,4 %, et 97,1 % contre 92,0 %. Sur l'hôpital de
+> test, l'AUC est identique (0,986) et la précision ne diffère que de 1,8 point, écart qui vient du seuil de décision,
+> pas de la qualité du classement. Mes graines ne mesurent que l'aléa d'entraînement, pas le choix des patients de test ;
+> sans intervalle de confiance par bootstrap sur les lames, je ne conclus pas à une différence sur le test.
+
+**Q3. Comment avez-vous vérifié que l'extraction des caractéristiques était correcte ?**
+*(EN: How did you check that the feature extraction was correct?)*
+
+> Versions des modèles épinglées ; prétraitement comparé au préprocesseur officiel (écart de 2,4e-7) ; demi-précision
+> comparée à la pleine précision (similarité cosinus ≥ 0,99998) ; chaque ligne réalignée sur son étiquette grâce aux
+> index sauvegardés ; effectifs comparés à l'article ; commit du code enregistré. J'ai aussi vérifié que Phikon n'avait
+> pas été pré-entraîné sur Camelyon, pour écarter une contamination du test.

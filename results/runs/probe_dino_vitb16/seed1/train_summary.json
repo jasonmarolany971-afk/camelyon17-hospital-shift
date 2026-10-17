@@ -1,0 +1,14 @@
+{
+  "run_dir": "artifacts/runs/probe_dino_vitb16/seed1",
+  "best_epoch": 6,
+  "best_val_acc": 0.9197799563407898,
+  "epochs": 10,
+  "train_minutes": 0.11739868720372518,
+  "device": "cpu",
+  "features": "artifacts/features/dino_vitb16",
+  "feature_revision": "f205d5d8e640a89a2b8ef0369670dfc37cc07fc2",
+  "feature_code_commit": "5189319",
+  "code_commit": "3511135",
+  "torch": "2.14.1",
+  "python": "3.12.12"
+}

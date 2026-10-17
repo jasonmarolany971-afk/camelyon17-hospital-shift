@@ -1,0 +1,14 @@
+{
+  "run_dir": "artifacts/runs/probe_phikon/seed1",
+  "best_epoch": 7,
+  "best_val_acc": 0.9700034260749817,
+  "epochs": 10,
+  "train_minutes": 0.11791603962580363,
+  "device": "cpu",
+  "features": "artifacts/features/phikon",
+  "feature_revision": "057cc0295895c2df3dd7681a89680da6015cbefe",
+  "feature_code_commit": "5189319",
+  "code_commit": "3511135",
+  "torch": "2.14.1",
+  "python": "3.12.12"
+}

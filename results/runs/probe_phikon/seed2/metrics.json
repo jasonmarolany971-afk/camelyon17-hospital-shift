@@ -1,0 +1,84 @@
+{
+  "run": "probe_phikon/seed2",
+  "selected_epoch": 0,
+  "threshold": {
+    "value": 0.28731200098991394,
+    "chosen_on": "val",
+    "target_specificity": 0.95
+  },
+  "splits": {
+    "id_val": {
+      "official_accuracy": 0.9894517064094543,
+      "n": 33560,
+      "accuracy": 0.9894517282479142,
+      "auc": 0.9992554774400985,
+      "sensitivity_at_threshold": 0.9915703275529865,
+      "specificity_at_threshold": 0.9878480415290232,
+      "predicted_tumor_share": 0.4908820023837902,
+      "by_hospital": {
+        "0": {
+          "n": 6011,
+          "accuracy": 0.9856928963566794,
+          "auc": 0.9989166691023621,
+          "sensitivity_at_threshold": 0.9899295065458208,
+          "specificity_at_threshold": 0.9812005277044855,
+          "predicted_tumor_share": 0.4906005656296789
+        },
+        "3": {
+          "n": 12879,
+          "accuracy": 0.9899060486062583,
+          "auc": 0.9995065749966935,
+          "sensitivity_at_threshold": 0.9909318323952471,
+          "specificity_at_threshold": 0.989819527996298,
+          "predicted_tumor_share": 0.49056603773584906
+        },
+        "4": {
+          "n": 14670,
+          "accuracy": 0.9905930470347648,
+          "auc": 0.999235766716282,
+          "sensitivity_at_threshold": 0.9928107286050049,
+          "specificity_at_threshold": 0.9888395858545113,
+          "predicted_tumor_share": 0.4912747102931152
+        }
+      }
+    },
+    "val": {
+      "official_accuracy": 0.9710062146186829,
+      "n": 34904,
+      "accuracy": 0.9710061884024753,
+      "auc": 0.9949251689017659,
+      "sensitivity_at_threshold": 0.9808044923217969,
+      "specificity_at_threshold": 0.950263580105432,
+      "predicted_tumor_share": 0.49415539766215905,
+      "by_hospital": {
+        "1": {
+          "n": 34904,
+          "accuracy": 0.9710061884024753,
+          "auc": 0.9949251689017659,
+          "sensitivity_at_threshold": 0.9808044923217969,
+          "specificity_at_threshold": 0.950263580105432,
+          "predicted_tumor_share": 0.49415539766215905
+        }
+      }
+    },
+    "test": {
+      "official_accuracy": 0.9327250719070435,
+      "n": 85054,
+      "accuracy": 0.9327250922943071,
+      "auc": 0.9867594207787932,
+      "sensitivity_at_threshold": 0.9368636395701554,
+      "specificity_at_threshold": 0.9641639429068591,
+      "predicted_tumor_share": 0.44624591436028876,
+      "by_hospital": {
+        "2": {
+          "n": 85054,
+          "accuracy": 0.9327250922943071,
+          "auc": 0.9867594207787932,
+          "sensitivity_at_threshold": 0.9368636395701554,
+          "specificity_at_threshold": 0.9641639429068591,
+          "predicted_tumor_share": 0.44624591436028876
+        }
+      }
+    }
+  }
+}
