@@ -10,4 +10,5 @@ momentum: 0.9
 weight_decay: 0.01
 eval_batch_size: 256      # inference only: does not change the results
 num_workers: 4
-amp: false                # mixed precision (CUDA only): decided after the benchmark
+amp: false                # mixed precision measured 10% slower on a T4 for this small model
+                          # (results/benchmarks/Tesla_T4.json): fp32 is faster and exact

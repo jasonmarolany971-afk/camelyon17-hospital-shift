@@ -1,0 +1,24 @@
+{
+  "device": "Tesla T4",
+  "cpu_cores": 4,
+  "num_workers": 4,
+  "batch_size": 32,
+  "torch": "2.11.0+cu128",
+  "data_images_per_s": 2015.566677472122,
+  "train_compute_images_per_s_fp32": 501.36649035050044,
+  "inference_images_per_s_fp32": 1843.1977039654917,
+  "end_to_end_images_per_s_fp32": 419.2468563736156,
+  "estimate_fp32": {
+    "epoch_minutes": 12.642057241341421,
+    "run_hours": 2.13014535945617,
+    "hours_for_9_runs": 19.171308235105528
+  },
+  "train_compute_images_per_s_amp": 451.0342750826032,
+  "inference_images_per_s_amp": 1829.4513633150525,
+  "end_to_end_images_per_s_amp": 386.5238892449845,
+  "estimate_amp": {
+    "epoch_minutes": 13.664570532036732,
+    "run_hours": 2.300738081800311,
+    "hours_for_9_runs": 20.7066427362028
+  }
+}
