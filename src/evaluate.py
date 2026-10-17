@@ -130,7 +130,8 @@ def evaluate_run(run_dir: Path, data_root=None, device_name=None, batch_size=256
     out_dir = run_dir if subset else results_root / config["name"] / f"seed{seed}"
     save_json(metrics, out_dir / "metrics.json")
     if out_dir != run_dir:
-        shutil.copy(run_dir / "history.csv", out_dir / "history.csv")
+        for name in ("history.csv", "train_summary.json"):
+            shutil.copy(run_dir / name, out_dir / name)
     print(f"Metrics written to {out_dir / 'metrics.json'}")
     return metrics
 

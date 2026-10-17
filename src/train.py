@@ -18,6 +18,7 @@ selected checkpoint.
 
 import argparse
 import platform
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -56,6 +57,12 @@ def train_one_epoch(model, loader, optimizer, scaler, device, use_amp) -> dict:
         correct += (logits.argmax(dim=1) == y).sum()
         seen += len(y)
     return {"train_loss": total_loss.item() / seen, "train_acc": correct.item() / seen}
+
+
+def code_commit() -> str | None:
+    """Git commit of the code being run, so every result can be traced to its code."""
+    result = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True)
+    return result.stdout.strip() if result.returncode == 0 else None
 
 
 def run_dir_for(output_dir: Path, name: str, seed: int, subset: int | None = None) -> Path:
@@ -161,6 +168,7 @@ def main() -> int:
         "train_minutes": sum(r["epoch_minutes"] for r in history),
         "device": str(device),
         "amp": use_amp,
+        "code_commit": code_commit(),
         "torch": torch.__version__,
         "python": platform.python_version(),
     }, run_dir / "train_summary.json")

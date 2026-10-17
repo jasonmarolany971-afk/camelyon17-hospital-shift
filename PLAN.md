@@ -34,7 +34,7 @@ On veut aussi savoir **quand le modèle doit s'abstenir** (renvoyer au pathologi
 1. **Le test (hôpital 2) ne sert qu'à mesurer, jamais à choisir.** Époque, seuil, hyperparamètre, température de calibration, seuil d'abstention : tout se choisit sur `val` (hôpital 1).
 2. **Aucun chiffre inventé** : chaque chiffre du README pointe vers un fichier de `results/` produit par le code.
 3. **Graines fixées et passées en paramètre** ; chaque expérience = une commande (`python -m src.train --config configs/X.yaml --seed 1`).
-4. **Au moins 3 graines** par configuration, résultat = moyenne ± écart-type, valeurs par graine conservées.
+4. **4 graines** par configuration (décision du 17 octobre : l'écart entre graines est énorme, et les deux GPU Kaggle font tourner les graines par paires pour le même quota), résultat = moyenne ± écart-type, valeurs par graine conservées.
 5. README honnête : développé avec l'aide de Claude Code ; limites explicites.
 
 ## 4. Architecture du dépôt (cible)
@@ -78,7 +78,7 @@ Livrables : dépôt, structure, `src/check_env.py`, ce plan, `LEARNING.md`.
 - Mini-banc d'essai chronométré (quelques centaines d'itérations) sur Mac et sur GPU cloud → estimation réelle du coût, puis décision.
 - Entraînement selon le protocole WILDS, sélection de l'époque sur `val`.
 - Évaluation : précision officielle (évaluateur `wilds`), AUC, sensibilité à spécificité fixée (seuil fixé sur `val`, proposition : spécificité 95 %), **par hôpital et globale**.
-- 1 graine pour valider la chaîne, puis 3 graines.
+- Graines 0 et 1 en parallèle (une par GPU), puis graines 2 et 3.
 
 ### Phase 3 — Caractéristiques figées + classifieurs linéaires
 - Extraction **une seule fois** des caractéristiques de tous les patches pour 2 modèles, sauvegarde sur disque (`artifacts/features/`).
@@ -89,7 +89,7 @@ Livrables : dépôt, structure, `src/check_env.py`, ce plan, `LEARNING.md`.
 
 ### Phase 4 — Couleur + graines multiples
 - 3 conditions : aucune / augmentation HED (perturbation des canaux hématoxyline-éosine-DAB) / normalisation de Macenko (matrice de référence calculée **sur le train uniquement**).
-- 3 conditions × 3 graines = 9 entraînements CNN (les 3 de la phase 2 sont la condition « aucune »).
+- 3 conditions × 4 graines = 12 entraînements CNN (les 4 de la phase 2 sont la condition « aucune »), par paires sur les deux T4.
 - Tableau final : moyenne ± écart-type, par hôpital.
 
 ### Phase 5 — Calibration, abstention, erreurs, Grad-CAM
@@ -119,12 +119,12 @@ Livrables : dépôt, structure, `src/check_env.py`, ce plan, `LEARNING.md`.
 | 5 | 14 – 20 nov. | Phase 5 |
 | 6 | 21 – 26 nov. | Phases 6 et 7 |
 
-**Plan B si retard** (dans cet ordre) : abandonner Macenko et garder l'augmentation HED ; réduire les galeries d'erreurs ; garder 3 graines dans tous les cas (sinon les comparaisons ne valent rien).
+**Plan B si retard** (dans cet ordre) : abandonner Macenko et garder l'augmentation HED ; réduire les galeries d'erreurs ; garder au moins 3 graines dans tous les cas (sinon les comparaisons ne valent rien).
 
 ## 7. Calcul : où tourne quoi
 
 - **Mac M4 (sans ventilateur)** : développement, tests sur petits sous-ensembles, exploration, classifieurs linéaires, évaluation, application. Un entraînement complet y serait long et le processeur ralentirait en chauffant.
-- **GPU cloud** : les 9 entraînements CNN et l'extraction des caractéristiques Phikon/ImageNet. Budget de référence : ~2 h par entraînement sur V100 d'après WILDS, donc de l'ordre d'une vingtaine d'heures GPU pour les 9 ; on mesurera nous-mêmes en phase 2 avant de s'engager.
+- **GPU cloud** : les 12 entraînements CNN et l'extraction des caractéristiques Phikon/ImageNet. Mesuré en phase 2 sur Kaggle (T4 x2) : environ 2 h 40 de session pour deux entraînements en parallèle, soit environ 16 h pour les 12 (quota : 30 h par semaine).
 
 ## 8. Décisions à prendre maintenant
 
@@ -137,7 +137,7 @@ Livrables : dépôt, structure, `src/check_env.py`, ce plan, `LEARNING.md`.
 | Risque | Parade |
 |---|---|
 | Serveur de téléchargement officiel cassé | copie vérifiée (comptes par split/hôpital, métadonnées) ; documenté dans le README |
-| Forte variance entre graines | 3 graines minimum, valeurs par graine publiées, pas de conclusion sur des écarts < écart-type |
+| Forte variance entre graines | 4 graines, valeurs par graine publiées, pas de conclusion sur des écarts < écart-type |
 | Quotas GPU gratuits | banc d'essai d'abord ; points de sauvegarde (checkpoints) pour reprendre une session coupée |
 | Licence Phikon non commerciale | mentionnée ; l'app publique n'utilise que le CNN |
 | Retard | plan B ci-dessus |
