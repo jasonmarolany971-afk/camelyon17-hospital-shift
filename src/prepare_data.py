@@ -17,6 +17,7 @@ Usage (from the repository root):
     python -m src.prepare_data                  # download + convert + verify
     python -m src.prepare_data --verify-only    # re-run the checks only
     python -m src.prepare_data --max-files 1    # quick test on one parquet file
+    python -m src.prepare_data --delete-parquet # small disks (Kaggle): ~12 GB instead of ~22 GB
 """
 
 import argparse
@@ -42,6 +43,8 @@ DATASET_DIR = "camelyon17_v1.0"
 PARQUET_DIR = "camelyon17_hf_parquet"
 # Parquet files (10.7 GB) + extracted PNG files (about the same size).
 MIN_FREE_DISK_GB = 25
+# With --delete-parquet, only one parquet file exists at a time.
+MIN_FREE_DISK_GB_STREAMING = 13
 
 # Official split sizes (WILDS paper, Appendix E.2).
 EXPECTED_SPLIT_SIZES = {"train": 302_436, "id_val": 33_560, "val": 34_904, "test": 85_054}
@@ -64,62 +67,58 @@ def patch_path(patient: int, node: int, x: int, y: int) -> str:
     return f"patches/{folder}/patch_{folder}_x_{x}_y_{y}.png"
 
 
-def download_parquet(parquet_dir: Path, max_files: int | None) -> list[Path]:
+def list_parquet_files(max_files: int | None) -> list[str]:
     names = sorted(
         name
         for name in list_repo_files(HF_REPO, repo_type="dataset", revision=HF_REVISION)
         if name.endswith(".parquet")
     )
-    if max_files is not None:
-        names = names[:max_files]
-    paths = []
-    for name in names:
-        # Already-downloaded files are skipped, so an interrupted run can be resumed.
-        local = hf_hub_download(
-            HF_REPO, name, repo_type="dataset", revision=HF_REVISION, local_dir=parquet_dir
-        )
-        paths.append(Path(local))
-    return paths
+    return names if max_files is None else names[:max_files]
 
 
-def convert(parquet_files: list[Path], dataset_dir: Path) -> pd.DataFrame:
-    """Write every patch as a PNG file and return the metadata table."""
-    total = sum(pq.ParquetFile(path).metadata.num_rows for path in parquet_files)
-    created_dirs = set()
+def download_file(name: str, parquet_dir: Path) -> Path:
+    # An already-downloaded file is skipped, so an interrupted run can be resumed.
+    return Path(hf_hub_download(HF_REPO, name, repo_type="dataset", revision=HF_REVISION, local_dir=parquet_dir))
+
+
+def convert_file(path: Path, dataset_dir: Path, created_dirs: set) -> list[dict]:
+    """Write every patch of one parquet file as a PNG file; return its metadata rows."""
+    hf_split = path.name.split("-")[0]  # "train", "validation" or "test"
+    parquet = pq.ParquetFile(path)
     rows = []
-    with tqdm(total=total, desc="Writing patches", unit="patch") as progress:
-        for path in parquet_files:
-            hf_split = path.name.split("-")[0]  # "train", "validation" or "test"
-            for batch in pq.ParquetFile(path).iter_batches(batch_size=1024):
-                columns = batch.to_pydict()
-                for i in range(batch.num_rows):
-                    patient, node = columns["patient"][i], columns["node"][i]
-                    x, y = columns["x_coord"][i], columns["y_coord"][i]
-                    center = columns["center"][i]
+    with tqdm(total=parquet.metadata.num_rows, desc=f"  {path.name}", unit="patch", leave=False) as progress:
+        for batch in parquet.iter_batches(batch_size=1024):
+            columns = batch.to_pydict()
+            for i in range(batch.num_rows):
+                patient, node = columns["patient"][i], columns["node"][i]
+                x, y = columns["x_coord"][i], columns["y_coord"][i]
+                center = columns["center"][i]
 
-                    relative = patch_path(patient, node, x, y)
-                    target = dataset_dir / relative
-                    if target.parent not in created_dirs:
-                        target.parent.mkdir(parents=True, exist_ok=True)
-                        created_dirs.add(target.parent)
-                    target.write_bytes(columns["image"][i]["bytes"])
+                target = dataset_dir / patch_path(patient, node, x, y)
+                if target.parent not in created_dirs:
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    created_dirs.add(target.parent)
+                target.write_bytes(columns["image"][i]["bytes"])
 
-                    # The HF "validation" split merges id_val (training hospitals)
-                    # and val (hospital 1); the hospital tells them apart.
-                    is_id_val = hf_split == "validation" and center in TRAIN_CENTERS
-                    rows.append({
-                        "image_id": columns["image_id"][i],
-                        "patient": f"{patient:03d}",
-                        "node": node,
-                        "x_coord": x,
-                        "y_coord": y,
-                        "tumor": columns["label"][i],
-                        "slide": columns["slide"][i],
-                        "center": center,
-                        "split": SPLIT_ID_VAL if is_id_val else SPLIT_TRAIN,
-                    })
-                progress.update(batch.num_rows)
+                # The HF "validation" split merges id_val (training hospitals)
+                # and val (hospital 1); the hospital tells them apart.
+                is_id_val = hf_split == "validation" and center in TRAIN_CENTERS
+                rows.append({
+                    "image_id": columns["image_id"][i],
+                    "patient": f"{patient:03d}",
+                    "node": node,
+                    "x_coord": x,
+                    "y_coord": y,
+                    "tumor": columns["label"][i],
+                    "slide": columns["slide"][i],
+                    "center": center,
+                    "split": SPLIT_ID_VAL if is_id_val else SPLIT_TRAIN,
+                })
+            progress.update(batch.num_rows)
+    return rows
 
+
+def build_metadata(rows: list[dict]) -> pd.DataFrame:
     # Sorting by image_id gives a stable row order, hence stable dataset indices.
     metadata = pd.DataFrame(rows).sort_values("image_id").set_index("image_id")
     metadata.index.name = None
@@ -214,6 +213,8 @@ def main() -> int:
     )
     parser.add_argument("--verify-only", action="store_true", help="Skip download and conversion.")
     parser.add_argument("--max-files", type=int, default=None, help="Only use the first N parquet files (testing).")
+    parser.add_argument("--delete-parquet", action="store_true",
+                        help="Delete each parquet file once converted (needs ~12 GB instead of ~22 GB).")
     parser.add_argument("--n-images", type=int, default=2000, help="Number of patches decoded during verification.")
     parser.add_argument("--seed", type=int, default=0, help="Seed for the verification sample.")
     parser.add_argument(
@@ -230,17 +231,23 @@ def main() -> int:
     if not args.verify_only:
         data_root.mkdir(parents=True, exist_ok=True)
         free_gb = shutil.disk_usage(data_root).free / 1e9
-        if free_gb < MIN_FREE_DISK_GB:
-            print(f"Only {free_gb:.0f} GB free in {data_root}, need {MIN_FREE_DISK_GB} GB.")
+        needed_gb = MIN_FREE_DISK_GB_STREAMING if args.delete_parquet else MIN_FREE_DISK_GB
+        if free_gb < needed_gb:
+            print(f"Only {free_gb:.0f} GB free in {data_root}, need {needed_gb} GB.")
             return 1
 
-        print(f"1/3 Downloading parquet files from {HF_REPO}@{HF_REVISION[:8]} ...")
-        parquet_files = download_parquet(data_root / PARQUET_DIR, args.max_files)
-        print(f"2/3 Converting {len(parquet_files)} parquet files into {dataset_dir} ...")
-        metadata = convert(parquet_files, dataset_dir)
-        metadata.to_csv(dataset_dir / "metadata.csv")
+        names = list_parquet_files(args.max_files)
+        print(f"1/2 Downloading and converting {len(names)} parquet files from {HF_REPO}@{HF_REVISION[:8]} "
+              f"into {dataset_dir} ...")
+        created_dirs, rows = set(), []
+        for name in tqdm(names, desc="Parquet files", unit="file"):
+            path = download_file(name, data_root / PARQUET_DIR)
+            rows += convert_file(path, dataset_dir, created_dirs)
+            if args.delete_parquet:
+                path.unlink()
+        build_metadata(rows).to_csv(dataset_dir / "metadata.csv")
         write_release_file(dataset_dir)
-        print("3/3 Verifying ...")
+        print("2/2 Verifying ...")
 
     summary = verify(data_root, args.n_images, args.seed)
     # A provenance record only makes sense for the full dataset.
