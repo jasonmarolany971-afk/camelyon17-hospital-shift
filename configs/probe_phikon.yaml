@@ -1,0 +1,9 @@
+# Linear probe on frozen phikon features, same protocol as the CNN baseline (configs/cnn_none.yaml):
+# only the backbone changes (pretrained and frozen instead of trained from scratch).
+name: probe_phikon
+features: phikon   # artifacts/features/<features>/, written by src/features.py
+epochs: 10
+batch_size: 32
+lr: 0.001                 # SGD, no learning-rate schedule
+momentum: 0.9
+weight_decay: 0.01
