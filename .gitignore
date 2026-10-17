@@ -19,3 +19,6 @@ kaggle.json
 
 # macOS
 .DS_Store
+
+# Training logs written by src.run_jobs
+logs/

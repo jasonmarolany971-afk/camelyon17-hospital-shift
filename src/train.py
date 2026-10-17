@@ -58,6 +58,11 @@ def train_one_epoch(model, loader, optimizer, scaler, device, use_amp) -> dict:
     return {"train_loss": total_loss.item() / seen, "train_acc": correct.item() / seen}
 
 
+def run_dir_for(output_dir: Path, name: str, seed: int, subset: int | None = None) -> Path:
+    """Folder of one run; quick tests (--subset) get their own folder."""
+    return Path(output_dir) / name / (f"seed{seed}" + (f"-subset{subset}" if subset else ""))
+
+
 def save_atomically(state: dict, path: Path) -> None:
     """Write to a temporary file, then rename: an interruption never leaves a corrupt file."""
     tmp = path.with_suffix(".tmp")
@@ -83,8 +88,7 @@ def main() -> int:
         config["epochs"] = args.epochs
     if args.num_workers is not None:
         config["num_workers"] = args.num_workers
-    run_name = f"seed{args.seed}" + (f"-subset{args.subset}" if args.subset else "")
-    run_dir = args.output_dir / config["name"] / run_name
+    run_dir = run_dir_for(args.output_dir, config["name"], args.seed, args.subset)
     if (run_dir / "last.pt").exists() and not args.resume:
         print(f"{run_dir} already contains a run: use --resume to continue it, or delete the folder.")
         return 1
