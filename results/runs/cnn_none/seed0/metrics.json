@@ -1,0 +1,76 @@
+{
+  "run": "cnn_none/seed0",
+  "selected_epoch": 7,
+  "threshold": {
+    "value": 0.9810158014297485,
+    "chosen_on": "val",
+    "target_specificity": 0.95
+  },
+  "splits": {
+    "id_val": {
+      "official_accuracy": 0.9235697388648987,
+      "n": 33560,
+      "accuracy": 0.923569725864124,
+      "auc": 0.9941779715376795,
+      "sensitivity_at_threshold": 0.39854287090558765,
+      "specificity_at_threshold": 0.9997050495516753,
+      "by_hospital": {
+        "0": {
+          "n": 6011,
+          "accuracy": 0.9457660954915987,
+          "auc": 0.9907030612705827,
+          "sensitivity_at_threshold": 0.6951997314535079,
+          "specificity_at_threshold": 1.0
+        },
+        "3": {
+          "n": 12879,
+          "accuracy": 0.9538007609286435,
+          "auc": 0.9958841939716874,
+          "sensitivity_at_threshold": 0.6535334584115072,
+          "specificity_at_threshold": 0.9992287521209317
+        },
+        "4": {
+          "n": 14670,
+          "accuracy": 0.8879345603271984,
+          "auc": 0.9937395315172544,
+          "sensitivity_at_threshold": 0.05087792064150422,
+          "specificity_at_threshold": 1.0
+        }
+      }
+    },
+    "val": {
+      "official_accuracy": 0.8834230899810791,
+      "n": 34904,
+      "accuracy": 0.8834231033692413,
+      "auc": 0.9580278612595058,
+      "sensitivity_at_threshold": 0.7363625945450378,
+      "specificity_at_threshold": 0.950034380013752,
+      "by_hospital": {
+        "1": {
+          "n": 34904,
+          "accuracy": 0.8834231033692413,
+          "auc": 0.9580278612595058,
+          "sensitivity_at_threshold": 0.7363625945450378,
+          "specificity_at_threshold": 0.950034380013752
+        }
+      }
+    },
+    "test": {
+      "official_accuracy": 0.49442705512046814,
+      "n": 85054,
+      "accuracy": 0.49442706986149976,
+      "auc": 0.6192176601026382,
+      "sensitivity_at_threshold": 0.0,
+      "specificity_at_threshold": 0.9998589131610506,
+      "by_hospital": {
+        "2": {
+          "n": 85054,
+          "accuracy": 0.49442706986149976,
+          "auc": 0.6192176601026382,
+          "sensitivity_at_threshold": 0.0,
+          "specificity_at_threshold": 0.9998589131610506
+        }
+      }
+    }
+  }
+}

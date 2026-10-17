@@ -1,0 +1,11 @@
+{
+  "run_dir": "/kaggle/working/artifacts/runs/cnn_none/seed1",
+  "best_epoch": 4,
+  "best_val_acc": 0.8750859498977661,
+  "epochs": 10,
+  "train_minutes": 145.10611487229664,
+  "device": "cuda",
+  "amp": false,
+  "torch": "2.11.0+cu128",
+  "python": "3.13.15"
+}
