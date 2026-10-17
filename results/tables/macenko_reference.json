@@ -1,0 +1,22 @@
+{
+  "stains": [
+    [
+      0.5463848545810981,
+      0.7222533271778472,
+      0.4240444812338936
+    ],
+    [
+      0.22870041070878197,
+      0.8561951516638299,
+      0.46327743783718367
+    ]
+  ],
+  "max_concentrations": [
+    1.63973066255913,
+    0.7624323823214503
+  ],
+  "min_tissue_fraction": 0.05,
+  "n_patches_used": 999,
+  "fitted_on": "999 random train patches, balanced across hospitals 0, 3, 4",
+  "seed": 0
+}

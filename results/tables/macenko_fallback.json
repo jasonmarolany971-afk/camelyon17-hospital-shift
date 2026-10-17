@@ -1,0 +1,12 @@
+{
+  "train": {
+    "n": 999,
+    "fallbacks": 0,
+    "rate": 0.0
+  },
+  "val": {
+    "n": 999,
+    "fallbacks": 0,
+    "rate": 0.0
+  }
+}
