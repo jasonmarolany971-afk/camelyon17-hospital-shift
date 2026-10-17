@@ -17,6 +17,9 @@ wilds==2.0.0
 huggingface_hub>=0.25
 pyarrow>=16
 
+# Pretrained backbones for frozen features (Phikon, DINO ViT-B/16), Phase 3
+transformers>=4.45
+
 # Data, metrics, figures
 numpy>=1.26
 pandas>=2.2
