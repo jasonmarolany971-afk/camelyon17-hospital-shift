@@ -6,6 +6,8 @@ Usage (from the repository root):
 Reads results/runs/<name>/seed<N>/metrics.json and history.csv and writes:
     results/tables/summary_<name>.csv   one row per (split, hospital, metric):
                                         mean, standard deviation, min, max and per-seed values
+    results/tables/selection_<name>.json how model selection on val behaves (correlation between val and
+                                        id_val over all epochs, id_val at the selected epoch)
     results/figures/curves_<name>.png   id_val and val accuracy after every epoch, one line per seed
 
 The standard deviation is the sample one (divided by n - 1), the usual
@@ -20,12 +22,13 @@ import re
 import sys
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from src.plotting import INK_SOFT, apply_style, plt, seed_color
 
 SPLITS = ["id_val", "val", "test"]
-METRICS = ["accuracy", "auc", "sensitivity_at_threshold", "specificity_at_threshold"]
+METRICS = ["accuracy", "auc", "sensitivity_at_threshold", "specificity_at_threshold", "predicted_tumor_share"]
 
 
 def load_runs(runs_dir: Path) -> dict[int, dict]:
@@ -67,6 +70,24 @@ def summarize(long: pd.DataFrame) -> pd.DataFrame:
     return summary.reset_index()
 
 
+def selection_analysis(runs: dict[int, dict]) -> dict:
+    """Does the epoch chosen on val (hospital 1) also look good in distribution (id_val)?"""
+    history = pd.concat([run["history"] for run in runs.values()])
+    per_seed = {}
+    for seed, run in runs.items():
+        h, epoch = run["history"].set_index("epoch"), run["metrics"]["selected_epoch"]
+        per_seed[f"seed{seed}"] = {
+            "selected_epoch": int(epoch),
+            "val_acc": float(h.val_acc[epoch]), "val_acc_median_over_epochs": float(h.val_acc.median()),
+            "id_val_acc": float(h.id_val_acc[epoch]), "id_val_acc_median_over_epochs": float(h.id_val_acc.median()),
+        }
+    return {
+        "pearson_val_vs_id_val_over_all_epochs": float(np.corrcoef(history.val_acc, history.id_val_acc)[0, 1]),
+        "n_points": int(len(history)),
+        "per_seed": per_seed,
+    }
+
+
 def plot_curves(runs: dict[int, dict], title: str, path: Path) -> None:
     apply_style()
     panels = [("id_val_acc", "id_val: training hospitals, same slides"), ("val_acc", "val: hospital 1, never seen")]
@@ -95,7 +116,7 @@ def print_summary(name: str, summary: pd.DataFrame, seeds: list[int]) -> None:
     print(f"{name}: {len(seeds)} seeds ({', '.join(map(str, seeds))}); mean ± sample std [min, max]")
     rows = summary[summary.hospital == "all"].set_index(["split", "metric"])
     labels = {"accuracy": "accuracy", "auc": "AUC", "sensitivity_at_threshold": "sens@thr",
-              "specificity_at_threshold": "spec@thr"}
+              "specificity_at_threshold": "spec@thr", "predicted_tumor_share": "called tumor"}
     for split in SPLITS:
         cells = []
         for metric, label in labels.items():
@@ -122,10 +143,15 @@ def main() -> int:
         table_path = args.results_dir / "tables" / f"summary_{name}.csv"
         table_path.parent.mkdir(parents=True, exist_ok=True)
         summary.to_csv(table_path, index=False)
+        selection = selection_analysis(runs)
+        selection_path = args.results_dir / "tables" / f"selection_{name}.json"
+        selection_path.write_text(json.dumps(selection, indent=2) + "\n")
         figure_path = args.results_dir / "figures" / f"curves_{name}.png"
         plot_curves(runs, f"{name}: accuracy after every epoch, one line per seed", figure_path)
         print_summary(name, summary, list(runs))
-        print(f"  -> {table_path}\n  -> {figure_path}\n")
+        print(f"  correlation(val acc, id_val acc) over {selection['n_points']} epochs: "
+              f"{selection['pearson_val_vs_id_val_over_all_epochs']:.2f}")
+        print(f"  -> {table_path}\n  -> {selection_path}\n  -> {figure_path}\n")
     return 0
 
 

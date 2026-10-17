@@ -78,27 +78,33 @@ def binary_metrics(y_true, scores, threshold: float) -> dict:
         "auc": float(roc_auc_score(y_true, scores)) if both_classes else None,
         "sensitivity_at_threshold": float(predicted[positives].mean()) if positives.any() else None,
         "specificity_at_threshold": float((~predicted[negatives]).mean()) if negatives.any() else None,
+        # Share of patches called tumor at 0.5: shows in which direction a hospital shifts the model.
+        "predicted_tumor_share": float((scores > 0.5).mean()),
     }
 
 
-def evaluate_run(run_dir: Path, data_root=None, device_name=None, batch_size=256, num_workers=4,
-                 subset=None, target_specificity=0.95, results_root=Path("results/runs")) -> dict:
-    checkpoint = torch.load(run_dir / "best.pt", map_location="cpu")
+def official_accuracy_from_frame(dataset, frame: pd.DataFrame) -> float:
+    """WILDS accuracy from saved predictions (metadata columns in WILDS order: hospital, slide, y)."""
+    metadata = torch.as_tensor(np.stack([frame.hospital, frame.slide, frame.y], axis=1), dtype=torch.long)
+    return official_accuracy(dataset, torch.as_tensor(frame.prob.to_numpy()), torch.as_tensor(frame.y.to_numpy()),
+                             metadata)
+
+
+def predict_splits(checkpoint: dict, dataset, run_dir: Path, device_name, batch_size, num_workers, subset) -> dict:
+    """Run the selected model on every evaluation split and save one parquet file per split."""
     config, seed = checkpoint["config"], checkpoint["seed"]
     device = get_device(device_name)
     model = build_model(config["model"])
     model.load_state_dict(checkpoint["model"])
     model.to(device)
 
-    dataset = load_dataset(data_root)
     transform = build_transform(config["color"])
     (run_dir / "predictions").mkdir(exist_ok=True)
-    frames, official = {}, {}
+    frames = {}
     for split in EVAL_SPLITS:
         split_subset = get_subset(dataset, split, transform, subset, seed=seed)
         loader = make_loader(split_subset, batch_size, shuffle=False, num_workers=num_workers)
         probs, y, metadata = predict(model, loader, device)
-        official[split] = official_accuracy(dataset, probs, y, metadata)
         frames[split] = pd.DataFrame({
             "index": split_subset.indices,
             "y": y.numpy(),
@@ -107,17 +113,21 @@ def evaluate_run(run_dir: Path, data_root=None, device_name=None, batch_size=256
             "slide": metadata[:, 1].numpy(),
         })
         frames[split].to_parquet(run_dir / "predictions" / f"{split}.parquet", index=False)
+    return frames
 
+
+def compute_metrics(dataset, frames: dict, checkpoint: dict, target_specificity: float) -> dict:
     # Chosen on val only, then applied as is to every split.
     threshold = threshold_at_specificity(frames["val"].y, frames["val"].prob, target_specificity)
     metrics = {
-        "run": f"{config['name']}/seed{seed}",
+        "run": f"{checkpoint['config']['name']}/seed{checkpoint['seed']}",
         "selected_epoch": checkpoint["epoch"],
         "threshold": {"value": threshold, "chosen_on": "val", "target_specificity": target_specificity},
         "splits": {},
     }
     for split, frame in frames.items():
-        entry = {"official_accuracy": official[split], **binary_metrics(frame.y, frame.prob, threshold)}
+        entry = {"official_accuracy": official_accuracy_from_frame(dataset, frame),
+                 **binary_metrics(frame.y, frame.prob, threshold)}
         # Sanity check: our accuracy and the WILDS evaluator must agree.
         if abs(entry["accuracy"] - entry["official_accuracy"]) > 1e-6:
             raise RuntimeError(f"{split}: accuracy {entry['accuracy']} != official {entry['official_accuracy']}")
@@ -125,9 +135,23 @@ def evaluate_run(run_dir: Path, data_root=None, device_name=None, batch_size=256
             int(hospital): binary_metrics(part.y, part.prob, threshold) for hospital, part in frame.groupby("hospital")
         }
         metrics["splits"][split] = entry
+    return metrics
+
+
+def evaluate_run(run_dir: Path, data_root=None, device_name=None, batch_size=256, num_workers=4,
+                 subset=None, target_specificity=0.95, results_root=Path("results/runs"),
+                 from_predictions=False) -> dict:
+    checkpoint = torch.load(run_dir / "best.pt", map_location="cpu")
+    dataset = load_dataset(data_root)
+    if from_predictions:
+        # Recompute the metrics from the saved predictions: no model, no image, no GPU.
+        frames = {split: pd.read_parquet(run_dir / "predictions" / f"{split}.parquet") for split in EVAL_SPLITS}
+    else:
+        frames = predict_splits(checkpoint, dataset, run_dir, device_name, batch_size, num_workers, subset)
+    metrics = compute_metrics(dataset, frames, checkpoint, target_specificity)
 
     # Quick tests (--subset) stay next to the run; only full evaluations go to results/.
-    out_dir = run_dir if subset else results_root / config["name"] / f"seed{seed}"
+    out_dir = run_dir if subset else results_root / checkpoint["config"]["name"] / f"seed{checkpoint['seed']}"
     save_json(metrics, out_dir / "metrics.json")
     if out_dir != run_dir:
         for name in ("history.csv", "train_summary.json"):
@@ -156,13 +180,15 @@ def main() -> int:
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--subset", type=int, default=None, help="Use N random patches per split (quick tests).")
     parser.add_argument("--target-specificity", type=float, default=0.95)
+    parser.add_argument("--from-predictions", action="store_true",
+                        help="Recompute the metrics from the saved predictions (no model inference).")
     args = parser.parse_args()
 
     if not (args.run_dir / "best.pt").exists():
         print(f"No best.pt in {args.run_dir}: train the model first.")
         return 1
     metrics = evaluate_run(args.run_dir, args.data_root, args.device, args.batch_size, args.num_workers,
-                           args.subset, args.target_specificity)
+                           args.subset, args.target_specificity, from_predictions=args.from_predictions)
     print_summary(metrics)
     return 0
 

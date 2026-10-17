@@ -3,12 +3,12 @@ import json
 import pandas as pd
 import pytest
 
-from src.aggregate import load_runs, long_table, summarize
+from src.aggregate import load_runs, long_table, selection_analysis, summarize
 
 
 def fake_metrics(accuracy: float, epoch: int) -> dict:
-    hospital = {"n": 10, "accuracy": accuracy, "auc": 0.9,
-                "sensitivity_at_threshold": 0.5, "specificity_at_threshold": 0.95}
+    hospital = {"n": 10, "accuracy": accuracy, "auc": 0.9, "sensitivity_at_threshold": 0.5,
+                "specificity_at_threshold": 0.95, "predicted_tumor_share": 0.5}
     split = {**hospital, "official_accuracy": accuracy, "by_hospital": {"2": hospital}}
     return {"selected_epoch": epoch, "threshold": {"value": 0.7},
             "splits": {"id_val": split, "val": split, "test": split}}
@@ -20,7 +20,9 @@ def runs_dir(tmp_path):
         folder = tmp_path / f"seed{seed}"
         folder.mkdir()
         (folder / "metrics.json").write_text(json.dumps(fake_metrics(accuracy, epoch)))
-        pd.DataFrame({"epoch": [0], "id_val_acc": [0.9], "val_acc": [0.8]}).to_csv(folder / "history.csv", index=False)
+        history = pd.DataFrame({"epoch": range(10), "id_val_acc": [0.9 + 0.01 * seed] * 10,
+                                "val_acc": [0.8 - 0.01 * seed] * 10})
+        history.to_csv(folder / "history.csv", index=False)
     (tmp_path / "seed0-subset512").mkdir()  # quick test folder: must be ignored
     return tmp_path
 
@@ -39,3 +41,12 @@ def test_summary_uses_sample_standard_deviation(runs_dir):
     assert row["values"] == "seed0=0.5000;seed1=0.8000;seed2=0.8000"
     assert summary.loc[("val", "all", "selected_epoch"), "values"] == "seed0=7.0000;seed1=4.0000;seed2=1.0000"
     assert ("test", "2", "accuracy") in summary.index
+
+
+def test_selection_analysis(runs_dir):
+    analysis = selection_analysis(load_runs(runs_dir))
+    # Seeds with a higher id_val have a lower val: perfectly anti-correlated by construction.
+    assert analysis["pearson_val_vs_id_val_over_all_epochs"] == pytest.approx(-1.0)
+    assert analysis["n_points"] == 30
+    assert analysis["per_seed"]["seed0"]["selected_epoch"] == 7
+    assert analysis["per_seed"]["seed1"]["id_val_acc"] == pytest.approx(0.91)

@@ -29,6 +29,7 @@ def test_binary_metrics_on_perfect_scores():
     assert metrics == {
         "n": 4, "accuracy": 1.0, "auc": 1.0,
         "sensitivity_at_threshold": 1.0, "specificity_at_threshold": 1.0,
+        "predicted_tumor_share": 0.5,
     }
 
 

@@ -161,3 +161,89 @@ après avoir vu le test.
 > d'entraînement, et 5 nombres de couleur suffisent à reconnaître l'hôpital dans 70,5 % des cas contre 20 % au hasard
 > (validation croisée groupée par patient).
 > Limite : la matrice de colorants de `rgb2hed` est générique ; les valeurs sont comparables entre hôpitaux, pas absolues.
+
+---
+
+## Phase 2 — CNN de référence et évaluation par hôpital
+
+### Concepts clés
+
+**1. Reproduire une référence à l'identique.**
+DenseNet-121 sans pré-entraînement, SGD (lr 1e-3, momentum 0,9, weight decay 1e-2), batch 32, 10 époques, aucune
+augmentation, époque choisie sur `val` : c'est le protocole ERM de WILDS, relu dans leur code. Reproduire la référence
+avant d'innover permet de comparer avec la littérature : sur 4 graines, on obtient 66,1 % ± 14,9 sur le test, contre
+70,3 % ± 6,4 dans l'article WILDS (`results/tables/summary_cnn_none.csv`).
+
+**2. L'anti-triche par construction.**
+`train.py` ne charge jamais le test. `evaluate.py`, lancé une seule fois sur le modèle retenu, fixe le seuil de décision
+sur `val` puis l'applique tel quel au test. Une règle qu'on n'a pas besoin de « respecter » parce que le code la rend
+impossible à enfreindre est plus fiable qu'une règle de discipline.
+
+**3. Mesurer avant d'optimiser : trouver le goulot.**
+Le banc d'essai sépare chargement des données, calcul et bout en bout. Sur un T4, le chargement n'était pas le goulot
+(4,8 fois de marge) ; le calcul était limité par le **lancement** de milliers de petites opérations par le CPU
+(petites images, batch de 32). Conséquence contre-intuitive : la précision mixte (`amp`) était 10 % **plus lente**.
+Ce qui a vraiment payé : deux graines en parallèle, une par GPU (le quota Kaggle compte le temps de session, pas les GPU).
+
+**4. Reproductibilité : ce qu'on contrôle et ce qu'on ne contrôle pas.**
+On contrôle : la graine (initialisation, ordre des batchs), l'ordre des batchs fixé par (graine, époque) pour une
+reprise exacte, les points de sauvegarde écrits de façon atomique, le commit du code enregistré dans chaque run.
+On ne contrôle pas : certaines opérations GPU (cuDNN) ne sont pas déterministes. Deux exécutions de la même graine ont
+divergé dès la première époque. L'**évaluation**, elle, est reproductible : le même point de sauvegarde donne les
+mêmes chiffres à 6 décimales sur Kaggle et sur le Mac. D'où : plusieurs graines, et toutes leurs valeurs publiées.
+
+**5. Écart-type d'échantillon.**
+Avec 4 graines, on divise par n − 1 (estimateur de l'écart-type d'une population à partir d'un échantillon).
+pandas le fait par défaut, NumPy non : piège classique. Avec si peu de valeurs, on publie aussi chaque valeur.
+
+**6. Sélectionner sur un hôpital, c'est s'adapter à cet hôpital.**
+Les hôpitaux décalent les probabilités du modèle dans des **sens opposés** : sur l'hôpital 1 (`val`), les modèles retenus
+prédisent « tumeur » pour 52 à 57 % des patches (vraie proportion : 50 %) ; sur l'hôpital 2 (test), pour 1 à 38 %.
+Choisir l'époque qui maximise `val`, c'est donc favoriser les époques où le modèle penche vers « non tumoral », ce qui
+compense l'hôpital 1… et aggrave l'hôpital 2. Sur les 40 points (graine, époque), la corrélation entre précision `val` et
+précision `id_val` est de −0,41 ; pour la graine 3, l'époque retenue est celle où `id_val` s'effondre à 64,5 %.
+WILDS observe la même chose : sélectionner sur `val` donne 93,2 % ± 5,2 en distribution, contre 98,7 % ± 0,1 en
+sélectionnant sur `id_val`. C'est une interprétation cohérente avec les chiffres, pas une preuve causale.
+Sources : `results/tables/summary_cnn_none.csv` (métrique `predicted_tumor_share`) et
+`results/tables/selection_cnn_none.json`.
+
+**7. AUC et précision ne disent pas la même chose.**
+L'AUC mesure si le modèle **classe** correctement (un patch tumoral a-t-il une probabilité plus haute qu'un patch sain ?),
+indépendamment du seuil. La précision mesure les décisions **à un seuil donné** (0,5). Sur le test, 3 graines sur 4 ont
+une AUC de 0,82 à 0,92 mais une précision de 58 à 82 % : une grande partie de l'échec vient d'un **décalage des
+probabilités**, pas seulement d'un mauvais classement. C'est un problème de calibration (phase 5). La graine 0
+(AUC 0,62) échoue aussi sur le classement lui-même.
+
+**8. Un seuil ne voyage pas.**
+Le seuil réglé sur `val` pour 95 % de spécificité donne entre 0 et 50 % de sensibilité sur le test. Un seuil clinique
+réglé dans un hôpital n'est pas valable dans un autre sans recalibration.
+
+### Questions d'entretien
+
+**Q1. Votre modèle fait 88 % sur l'hôpital de validation et 66 % sur l'hôpital de test. Pourquoi, et pourquoi
+continuer à sélectionner sur la validation ?**
+*(EN: Your model scores 88% on the validation hospital and 66% on the test hospital. Why, and why keep selecting on validation?)*
+
+> Chaque hôpital décale les probabilités du modèle différemment ; ici, l'hôpital de validation pousse vers « tumeur » et
+> celui de test vers « non tumoral ». En choisissant l'époque sur la validation, on choisit des modèles adaptés à cet
+> hôpital-là : les scores de validation sont serrés (88,2 % ± 0,7) alors que le test varie de 49 à 82 %. Mais c'est le
+> protocole officiel, et la seule option honnête sans regarder le test. Les parades : valider sur plusieurs hôpitaux,
+> réduire le décalage (normalisation de couleur, phase 4) et recalibrer ou s'abstenir (phase 5).
+
+**Q2. La précision mixte a ralenti votre entraînement. Comment est-ce possible ?**
+*(EN: Mixed precision made your training slower. How is that possible?)*
+
+> Avec des images 96×96 et des batchs de 32, chaque opération du DenseNet est minuscule : le GPU attend que le CPU lui
+> envoie la suivante. Le temps est dominé par le lancement des opérations, pas par le calcul. La précision mixte ajoute
+> des conversions et des contrôles du GradScaler, donc plus de lancements, sans gain de calcul. Preuve : en inférence,
+> des batchs de 256 vont 3,7 fois plus vite par image. J'ai mesuré avant d'optimiser, puis utilisé les deux GPU en
+> parallèle pour deux graines, ce qui a réellement réduit le coût.
+
+**Q3. Comment rendez-vous un entraînement GPU reproductible ?**
+*(EN: How do you make GPU training reproducible?)*
+
+> Graine fixée et passée en paramètre, ordre des batchs déterminé par la graine et l'époque (une reprise après
+> interruption redonne exactement les mêmes batchs, vérifié au bit près sur CPU), points de sauvegarde atomiques,
+> commit du code et versions enregistrés dans chaque run. Mais certaines opérations GPU ne sont pas déterministes :
+> deux exécutions de la même graine ont divergé. La reproductibilité est donc statistique : plusieurs graines, moyenne
+> ± écart-type et toutes les valeurs. L'évaluation, elle, est identique à 6 décimales entre Kaggle et mon Mac.
