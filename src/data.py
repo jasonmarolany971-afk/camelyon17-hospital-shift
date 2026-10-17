@@ -17,22 +17,33 @@ warnings.filterwarnings("ignore", message="The given NumPy array is not writable
 # ImageNet statistics, as in the WILDS reference code ("image_base" transform).
 MEAN = [0.485, 0.456, 0.406]
 STD = [0.229, 0.224, 0.225]
-COLOR_METHODS = ["none"]  # "hed" and "macenko" are added in Phase 4
+COLOR_METHODS = ["none", "hed", "macenko"]
 
 
 def load_dataset(data_root=None) -> Camelyon17Dataset:
     return Camelyon17Dataset(root_dir=str(data_root or default_data_root()), download=False)
 
 
-def build_transform(color: str = "none"):
-    """WILDS "image_base" transform: tensor in [0, 1], then ImageNet normalization.
+def build_transform(config: dict, train: bool):
+    """Color step (if any), then the WILDS "image_base" transform: tensor in [0, 1], ImageNet normalization.
 
-    WILDS also resizes to 96x96, a no-op for these patches. The reference
-    protocol uses no data augmentation for Camelyon17.
+    - "none": no color step (WILDS reference protocol; WILDS also resizes to 96x96, a no-op here).
+    - "hed": random HED jitter on training patches only. Evaluation patches are never
+      augmented, otherwise the val accuracy used to select the epoch would be random.
+    - "macenko": Macenko normalization on every patch, training and evaluation alike,
+      towards the reference fitted on train patches (results/tables/macenko_reference.json).
     """
+    from src.color import HEDJitter, MacenkoNormalizer
+
+    color = config.get("color", "none")
     if color not in COLOR_METHODS:
         raise ValueError(f"Unknown color method {color!r}, expected one of {COLOR_METHODS}")
-    return transforms.Compose([transforms.ToTensor(), transforms.Normalize(MEAN, STD)])
+    steps = []
+    if color == "hed" and train:
+        steps.append(HEDJitter(sigma=config["hed_sigma"]))
+    elif color == "macenko":
+        steps.append(MacenkoNormalizer.from_file(config["macenko_reference"]))
+    return transforms.Compose(steps + [transforms.ToTensor(), transforms.Normalize(MEAN, STD)])
 
 
 def get_subset(dataset, split: str, transform, max_size: int | None = None, seed: int = 0) -> WILDSSubset:

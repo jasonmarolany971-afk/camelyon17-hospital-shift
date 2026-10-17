@@ -22,10 +22,13 @@ from src.plotting import AXIS, INK, INK_SOFT, apply_style, plt, seed_color
 # Short axis labels; the caption below the figure says what each method is.
 LABELS = {
     "cnn_none": "CNN\n(scratch)",
+    "cnn_hed": "CNN\n+ HED",
+    "cnn_macenko": "CNN\n+ Macenko",
     "probe_dino_vitb16": "DINO\n(ImageNet)",
     "probe_phikon": "Phikon\n(histology)",
 }
-CAPTION = ("CNN: DenseNet-121 trained from scratch. DINO and Phikon: frozen ViT-B/16 pretrained on natural images "
+CAPTION = ("CNN: DenseNet-121 trained from scratch (+ HED: stain augmentation; + Macenko: stain normalization). "
+           "DINO and Phikon: frozen ViT-B/16 pretrained on natural images "
            "or on histology, with a linear layer on top.\nEpoch and decision threshold selected on val only; "
            "test evaluated once per seed.")
 SPLIT_TITLES = {"id_val": "id_val (training hospitals)", "val": "val (hospital 1)", "test": "test (hospital 2)"}

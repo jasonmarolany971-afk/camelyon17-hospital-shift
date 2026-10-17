@@ -106,9 +106,11 @@ def main() -> int:
     use_amp = bool(config.get("amp", False)) and device.type == "cuda"
 
     dataset = load_dataset(args.data_root)
-    transform = build_transform(config["color"])
-    train_set = get_subset(dataset, "train", transform, args.subset, seed=args.seed)
-    monitored = {split: get_subset(dataset, split, transform, args.subset, seed=args.seed) for split in MONITORED_SPLITS}
+    # Augmentation (if any) on training patches only; evaluation patches are never augmented.
+    train_set = get_subset(dataset, "train", build_transform(config, train=True), args.subset, seed=args.seed)
+    eval_transform = build_transform(config, train=False)
+    monitored = {split: get_subset(dataset, split, eval_transform, args.subset, seed=args.seed)
+                 for split in MONITORED_SPLITS}
 
     model = build_model(config["model"]).to(device)
     optimizer = torch.optim.SGD(

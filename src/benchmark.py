@@ -114,7 +114,7 @@ def main() -> int:
     print(f"Device: {device_name} | CPU cores: {os.cpu_count()} | DataLoader workers: {num_workers}")
 
     dataset = load_dataset(args.data_root)
-    train_set = get_subset(dataset, "train", build_transform(config["color"]))
+    train_set = get_subset(dataset, "train", build_transform(config, train=True))  # includes augmentation cost
     loader = make_loader(train_set, config["batch_size"], shuffle=True, num_workers=num_workers,
                          generator=torch.Generator().manual_seed(0))
 

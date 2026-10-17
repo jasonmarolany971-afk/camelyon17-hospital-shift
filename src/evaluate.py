@@ -98,7 +98,7 @@ def predict_splits(checkpoint: dict, dataset, run_dir: Path, device_name, batch_
     model.load_state_dict(checkpoint["model"])
     model.to(device)
 
-    transform = build_transform(config["color"])
+    transform = build_transform(config, train=False)
     (run_dir / "predictions").mkdir(exist_ok=True)
     frames = {}
     for split in EVAL_SPLITS:

@@ -1,0 +1,15 @@
+# CNN with per-patch Macenko stain normalization (Macenko et al., 2009) on every patch,
+# training and evaluation. Same WILDS protocol as configs/cnn_none.yaml otherwise.
+name: cnn_macenko
+model: densenet121        # torchvision, trained from scratch (no pretraining)
+color: macenko
+macenko_reference: results/tables/macenko_reference.json   # fitted on train patches only
+epochs: 10
+batch_size: 32
+lr: 0.001                 # SGD, no learning-rate schedule
+momentum: 0.9
+weight_decay: 0.01
+eval_batch_size: 256      # inference only: does not change the results
+num_workers: 4
+amp: false                # mixed precision measured 10% slower on a T4 for this small model
+                          # (results/benchmarks/Tesla_T4.json): fp32 is faster and exact
