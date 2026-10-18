@@ -21,16 +21,19 @@ from src.plotting import AXIS, INK, INK_SOFT, apply_style, plt, seed_color
 
 # Short axis labels; the caption below the figure says what each method is.
 LABELS = {
-    "cnn_none": "CNN\n(scratch)",
+    "cnn_none": "CNN\nscratch",
     "cnn_hed": "CNN\n+ HED",
     "cnn_macenko": "CNN\n+ Macenko",
-    "probe_dino_vitb16": "DINO\n(ImageNet)",
-    "probe_phikon": "Phikon\n(histology)",
+    "probe_dino_vitb16": "DINO\nImageNet",
+    "probe_phikon": "Phikon\nhistology",
 }
-CAPTION = ("CNN: DenseNet-121 trained from scratch (+ HED: stain augmentation; + Macenko: stain normalization). "
-           "DINO and Phikon: frozen ViT-B/16 pretrained on natural images "
-           "or on histology, with a linear layer on top.\nEpoch and decision threshold selected on val only; "
-           "test evaluated once per seed.")
+DESCRIPTIONS = {
+    "cnn_none": "CNN: DenseNet-121 trained from scratch.",
+    "cnn_hed": "+ HED: stain augmentation (training only).",
+    "cnn_macenko": "+ Macenko: stain normalization (every patch).",
+    "probe_dino_vitb16": "DINO, Phikon: frozen ViT-B/16 pretrained on natural images or on histology, linear layer on top.",
+}
+DESCRIPTIONS["probe_phikon"] = DESCRIPTIONS["probe_dino_vitb16"]
 SPLIT_TITLES = {"id_val": "id_val (training hospitals)", "val": "val (hospital 1)", "test": "test (hospital 2)"}
 TABLE_METRICS = ["accuracy", "auc", "sensitivity_at_threshold", "specificity_at_threshold", "predicted_tumor_share"]
 
@@ -62,7 +65,8 @@ def comparison_table(long: pd.DataFrame, names: list[str]) -> pd.DataFrame:
 def plot(long: pd.DataFrame, names: list[str], path: Path) -> None:
     apply_style()
     metrics = [("accuracy", "Accuracy (%)", 100), ("auc", "AUC", 1)]
-    fig, axes = plt.subplots(len(metrics), len(SPLITS), figsize=(13, 7.2), sharey="row")
+    panel_width = 1.15 * len(names) + 0.6  # inches: room for every method label
+    fig, axes = plt.subplots(len(metrics), len(SPLITS), figsize=(3 * panel_width, 7.2), sharey="row")
     for row, (metric, ylabel, scale) in enumerate(metrics):
         for col, split in enumerate(SPLITS):
             ax = axes[row, col]
@@ -88,7 +92,9 @@ def plot(long: pd.DataFrame, names: list[str], path: Path) -> None:
     fig.legend(handles=handles, loc="upper right", ncol=len(handles), fontsize=9, bbox_to_anchor=(1.0, 1.02))
     fig.suptitle("One dot per seed, same scale for every method", x=0.01, ha="left", fontsize=11,
                  fontweight="bold", y=1.02)
-    fig.text(0.01, -0.05, CAPTION, color=INK_SOFT, fontsize=9)
+    descriptions = list(dict.fromkeys(DESCRIPTIONS[n] for n in names if n in DESCRIPTIONS))
+    caption = " ".join(descriptions) + "\nEpoch and decision threshold selected on val only; test evaluated once per seed."
+    fig.text(0.01, -0.05, caption, color=INK_SOFT, fontsize=9)
     for ax in axes.flat:
         ax.tick_params(axis="x", colors=AXIS, labelcolor=INK_SOFT)
     path.parent.mkdir(parents=True, exist_ok=True)

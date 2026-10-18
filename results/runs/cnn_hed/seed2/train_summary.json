@@ -1,0 +1,12 @@
+{
+  "run_dir": "/kaggle/working/artifacts/runs/cnn_hed/seed2",
+  "best_epoch": 8,
+  "best_val_acc": 0.9124742150306702,
+  "epochs": 10,
+  "train_minutes": 202.10410284996033,
+  "device": "cuda",
+  "amp": false,
+  "code_commit": "f69dc3d",
+  "torch": "2.11.0+cu128",
+  "python": "3.13.15"
+}
