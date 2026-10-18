@@ -24,6 +24,7 @@ transformers>=4.45
 numpy>=1.26
 pandas>=2.2
 scikit-learn>=1.5
+threadpoolctl>=3.1      # limits BLAS threads in DataLoader workers (installed with scikit-learn)
 matplotlib>=3.9
 pyyaml>=6.0
 tqdm>=4.66

@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 import torch
 import yaml
+from threadpoolctl import threadpool_limits
 
 
 def default_data_root() -> Path:
@@ -22,7 +23,7 @@ def set_seed(seed: int) -> None:
 
 
 def seed_worker(worker_id: int) -> None:
-    """Give each DataLoader worker its own NumPy and `random` seed.
+    """Give each DataLoader worker its own NumPy and `random` seed, and a single BLAS thread.
 
     PyTorch seeds its own generator in every worker, but not NumPy's: without
     this, workers could draw identical "random" augmentations.
@@ -30,6 +31,9 @@ def seed_worker(worker_id: int) -> None:
     worker_seed = torch.initial_seed() % 2**32
     np.random.seed(worker_seed)
     random.seed(worker_seed)
+    # One BLAS thread per worker: otherwise every worker's NumPy starts one thread per
+    # core, and several workers fight over the same few cores (Macenko on Kaggle).
+    threadpool_limits(limits=1)
 
 
 def get_device(name: str | None = None) -> torch.device:

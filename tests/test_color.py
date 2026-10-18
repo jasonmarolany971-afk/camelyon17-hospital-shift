@@ -71,3 +71,11 @@ def test_hed_light_changes_colors_by_a_few_levels_and_is_seeded_by_torch():
     change = np.abs(first - np.asarray(image, dtype=float))
     assert np.array_equal(first, again)
     assert 0 < change.mean() < 15  # out of 255: a light change
+
+
+def test_pinv_concentrations_match_least_squares():
+    od = synthetic_od([HEMATOXYLIN, EOSIN])
+    stains = unit([HEMATOXYLIN, EOSIN])
+    from src.color import stain_concentrations
+    expected = np.linalg.lstsq(stains.T, od.T, rcond=None)[0].T
+    assert np.allclose(stain_concentrations(od, stains), expected)
