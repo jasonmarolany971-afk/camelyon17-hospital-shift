@@ -330,3 +330,105 @@ entraîné de bout en bout ?**
 > comparée à la pleine précision (similarité cosinus ≥ 0,99998) ; chaque ligne réalignée sur son étiquette grâce aux
 > index sauvegardés ; effectifs comparés à l'article ; commit du code enregistré. J'ai aussi vérifié que Phikon n'avait
 > pas été pré-entraîné sur Camelyon, pour écarter une contamination du test.
+
+---
+
+## Phase 4 — Couleur : augmentation HED et normalisation de Macenko
+
+### Concepts clés
+
+**1. Deux réponses au décalage de couleur : apprendre à l'ignorer, ou l'effacer.**
+L'**augmentation** (HED jitter) modifie au hasard la coloration de chaque patch, **à l'entraînement seulement** : le
+modèle voit plus de colorations que les trois hôpitaux d'entraînement n'en offrent, et doit s'appuyer sur autre chose
+(formes, textures). À l'inférence, pas de hasard : sinon la même image recevrait une prédiction différente à chaque appel.
+La **normalisation** (Macenko) ramène chaque image vers une coloration de référence, **à l'entraînement comme à
+l'inférence** (`val`, test, et plus tard l'application) : le modèle n'a vu que des images normalisées, lui donner une
+image brute serait un nouveau décalage. Un test vérifie cette règle pour chaque configuration (`tests/test_transforms.py`).
+
+**2. Pourquoi travailler en densité optique plutôt qu'en RGB.**
+En densité optique (phase 1), un pixel est la somme d'une contribution d'hématoxyline et d'une contribution d'éosine,
+chacune proportionnelle à la quantité de colorant. « Un peu plus d'éosine » devient une opération simple : multiplier
+une concentration. Alternative écartée : `ColorJitter` de torchvision (luminosité, contraste, teinte en RGB), qui
+produit des couleurs qu'aucune coloration H&E ne donne et ne sépare pas les deux colorants.
+
+**3. HED jitter (Tellez et al., 2019).**
+Chaque pixel est décomposé en trois concentrations : H (hématoxyline), E (éosine) et D (DAB, troisième canal de la
+matrice, presque vide en H&E). Pour chaque canal, on tire α ~ U(1 − σ, 1 + σ) et β ~ U(−σ, σ), on applique
+C → α·C + β à tous les pixels du patch, puis on reconstruit l'image. σ = 0,05 (« HED-light » ; Tellez appelle
+« HED-strong » σ = 0,2). Cette valeur a été fixée **avant tout entraînement**, sur une vérification visuelle
+(`results/figures/hed_light_examples.png`), et n'a pas été réglée : la régler se ferait sur `val`, jamais sur le test.
+Piège d'unités : `rgb2hed` de scikit-image divise l'OD par 13,8 (= −log(1e-6)) ; dans ces unités, σ = 0,05 serait
+environ 14 fois plus fort. Notre code applique la matrice `hed_from_rgb` directement à l'OD (logarithme naturel).
+
+**4. La normalisation de Macenko, étape par étape (Macenko et al., 2009).**
+Pour chaque patch :
+1. Garder les pixels de tissu (norme de l'OD ≥ 0,15).
+2. Dans l'espace OD à trois dimensions, ces pixels forment un nuage presque plat, puisque chacun est un mélange de deux
+   colorants : on trouve ce plan par analyse en composantes principales (les deux directions principales).
+3. Mesurer l'angle de chaque pixel dans ce plan ; les deux angles extrêmes (1er et 99e centiles, plus robustes que le
+   minimum et le maximum) donnent les deux colorants purs. L'hématoxyline est celui qui absorbe le plus le rouge.
+4. Calculer la concentration de chaque colorant par moindres carrés.
+5. Mettre à l'échelle (99e centile de chaque concentration → valeur de référence), puis reconstruire l'image avec les
+   vecteurs de colorant de la référence.
+
+Si le patch a moins de 5 % de tissu, ou si le calcul échoue, on garde l'image d'origine (repli). Taux de repli mesuré :
+0 sur 999 patches de train, 0 sur 999 patches de `val` (`results/tables/macenko_fallback.json`).
+
+**5. Une référence calculée sur le train uniquement, et appliquée patch par patch.**
+La référence est la médiane des vecteurs de colorant et des concentrations maximales de 999 patches de train, répartis
+entre les hôpitaux 0, 3 et 4 (`results/tables/macenko_reference.json`). Utiliser des images de l'hôpital cible, même
+sans leurs étiquettes, serait de l'**adaptation de domaine** : un autre problème que celui de WILDS, qui mesure la
+généralisation à un hôpital jamais vu. Chaque patch est normalisé seul : l'application pourra traiter une image isolée
+d'un hôpital inconnu. Contrepartie : une estimation sur 96 × 96 pixels est plus bruitée que sur une lame entière.
+
+**6. Un écart volontaire avec les implémentations courantes.**
+Beaucoup d'implémentations de Macenko gardent un pixel si son OD dépasse 0,15 **dans chaque canal**. Or l'éosine absorbe
+peu le rouge : un pixel de stroma rose a une OD rouge proche de 0,1. Ces pixels sont exclus, et le vecteur d'éosine
+estimé est biaisé. Nous seuillons la norme de l'OD. Un test sur des pixels synthétiques de colorants connus, dont 10 %
+d'éosine pure, vérifie que les deux vecteurs sont retrouvés (similarité cosinus > 0,999, `tests/test_color.py`).
+
+**7. Résultat de l'augmentation HED : moins d'échecs graves, pas encore la solution.**
+Quatre graines, même protocole que la référence, époque et seuil choisis sur `val` (`results/tables/comparison.csv`) :
+
+| Mesure | Sans couleur | HED-light |
+|---|---|---|
+| Précision, hôpital de test (2) | 66,1 % ± 14,9 | 81,0 % ± 5,1 |
+| Pire graine, hôpital de test | 49,4 % | 77,1 % |
+| AUC, hôpital de test | 0,817 | 0,918 |
+| Sensibilité au seuil choisi sur `val`, hôpital de test | 17,3 % | 46,2 % |
+| Part déclarée « tumeur » sur le test (vraie part : 50 %) | 18,7 % | 36,1 % |
+| Précision en distribution (`id_val`) | 87,2 % ± 15,2 | 96,5 % ± 1,3 |
+
+L'AUC augmente de 10 points : le **classement** s'améliore, pas seulement le seuil. Autre effet : sur l'ensemble des
+époques, la corrélation entre précision sur `val` et sur `id_val` passe de −0,41 à +0,52
+(`results/tables/selection_cnn_*.json`). Choisir l'époque sur l'hôpital 1 ne sacrifie plus les hôpitaux d'entraînement :
+ils ne tirent plus les probabilités dans des sens opposés. Mais le modèle sous-détecte encore sur l'hôpital 2 (36 % de
+patches déclarés tumeur pour 50 %), et reste loin des têtes linéaires sur caractéristiques figées (92 à 94 %).
+
+**8. Quatre graines : la différence est-elle significative ?**
+Test t de Welch (il ne suppose pas des variances égales, ici 14,9 contre 5,1 points) sur les quatre précisions par
+graine (`results/tables/summary_cnn_none.csv` et `summary_cnn_hed.csv`) : t = 1,89, environ 3,7 degrés de liberté,
+**p = 0,14**. Non significatif au seuil de 5 %. Cela ne veut pas dire « aucun effet » : avec quatre graines et un
+écart-type de 15 points pour la référence, le test a peu de puissance. On peut affirmer honnêtement : gain moyen de
+15 points, non significatif avec quatre graines ; écart-type divisé par trois ; la pire graine HED (77,1 %) dépasse
+trois des quatre graines de la référence. Le nombre de graines a été fixé **avant** de voir les résultats : en ajouter
+jusqu'à obtenir p < 0,05 serait du *p-hacking*. Et comme en phase 3, les graines ne mesurent pas l'aléa du choix des
+patients de test (bootstrap par lame, phase 5).
+
+**9. Le coût d'une transformation à la volée.**
+Les transformations de couleur tournent sur le processeur, dans les *workers* du DataLoader, à chaque époque. Durée
+d'entraînement de 10 époques (`train_minutes` dans `train_summary.json`) : 143 à 145 min sans couleur, 180 à 202 min
+avec HED. Macenko (une analyse en composantes principales et des moindres carrés par patch) n'avait pas fini sa première
+époque après 45 min au premier essai sur Kaggle. Deux corrections, mesurées avant d'être adoptées :
+- `pinv` au lieu de `lstsq` pour les moindres carrés : 44 % plus rapide par patch, images identiques au pixel près sur
+  600 patches ;
+- un seul fil de calcul BLAS par *worker* : sinon chaque *worker* lance un fil NumPy par cœur, et les *workers* des deux
+  entraînements parallèles se disputent les quelques cœurs de la machine (*oversubscription*).
+
+Alternative écartée : pré-calculer une fois les images normalisées (plus rapide à l'entraînement, mais une copie du jeu
+de données et du code en plus). Effet des corrections sur la durée d'une époque : à mesurer sur la relance Kaggle.
+
+### Résultats Macenko et questions d'entretien
+
+À compléter quand les quatre graines `cnn_macenko` seront terminées : comparaison des trois conditions de couleur,
+puis trois questions d'entretien avec leurs réponses.
