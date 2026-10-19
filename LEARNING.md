@@ -426,7 +426,20 @@ avec HED. Macenko (une analyse en composantes principales et des moindres carré
   entraînements parallèles se disputent les quelques cœurs de la machine (*oversubscription*).
 
 Alternative écartée : pré-calculer une fois les images normalisées (plus rapide à l'entraînement, mais une copie du jeu
-de données et du code en plus). Effet des corrections sur la durée d'une époque : à mesurer sur la relance Kaggle.
+de données et du code en plus). Effet des corrections : 25,6 à 28,8 min par époque sur la relance (`epoch_minutes` dans
+`history.csv`), contre plus de 45 min avant.
+
+**10. Un cas limite mesuré : le débordement numérique.**
+Les journaux Kaggle de Macenko contiennent 60 avertissements `overflow encountered in exp` par graine. Python n'affiche
+un avertissement qu'une fois par processus : 60 = 2 *workers* × 3 chargeurs (train, `val`, `id_val`) × 10 époques, car
+les *workers* sont recréés à chaque passage. Le nombre de lignes ne dit donc rien de la fréquence ; il faut la mesurer
+(`python -m src.color check --n-patches 9999`, `results/tables/macenko_checks.json`) : 3 patches sur 9 999 en train,
+en `id_val` et en `val` (0,03 %), aucun sur 9 999 patches de test. Tous ont au moins 44 % de pixels saturés (un canal
+à 0, donc une OD à son plafond) : leurs concentrations sont extrêmes, certaines OD reconstruites sont très négatives,
+`exp(-OD)` déborde et `np.clip` ramène ces valeurs à la luminosité maximale. L'image normalisée est quand même produite.
+Décision : code inchangé pour les graines 2 et 3, car les quatre graines doivent utiliser exactement la même méthode.
+Une correction (exclure ou plafonner les pixels saturés) changerait la méthode et obligerait à réentraîner les quatre
+graines ; c'est une limite documentée.
 
 ### Résultats Macenko et questions d'entretien
 

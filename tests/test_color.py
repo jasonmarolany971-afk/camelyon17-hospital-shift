@@ -2,7 +2,8 @@ import numpy as np
 import torch
 from PIL import Image
 
-from src.color import HEDJitter, MacenkoNormalizer, estimate_stains, od_to_rgb, rgb_to_od, tissue_od, to_image
+from src.color import (HEDJitter, MacenkoNormalizer, estimate_stains, od_to_rgb, reconstruction_overflows, rgb_to_od,
+                       tissue_od, to_image)
 
 HEMATOXYLIN = np.array([0.65, 0.70, 0.29])
 EOSIN = np.array([0.07, 0.99, 0.11])
@@ -79,3 +80,13 @@ def test_pinv_concentrations_match_least_squares():
     from src.color import stain_concentrations
     expected = np.linalg.lstsq(stains.T, od.T, rcond=None)[0].T
     assert np.allclose(stain_concentrations(od, stains), expected)
+
+
+def test_reconstruction_overflows_flags_overflow_only():
+    class Overflowing:  # stands in for a patch whose reconstruction overflows exp()
+        def normalize(self, image):
+            return np.exp(np.array([1000.0])), True
+
+    assert reconstruction_overflows(Overflowing(), image=None)
+    normal = MacenkoNormalizer(unit([HEMATOXYLIN, EOSIN]), max_concentrations=[1.0, 1.0])
+    assert not reconstruction_overflows(normal, synthetic_image([HEMATOXYLIN, EOSIN]))

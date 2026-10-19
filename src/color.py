@@ -13,6 +13,7 @@ is a mix of a hematoxylin (H) and an eosin (E) color vector.
 Usage (from the repository root):
     python -m src.color reference   # fit the Macenko reference on train patches
     python -m src.color gallery     # visual check on train and val patches, fallback rates
+    python -m src.color check --n-patches 9999   # fallback and overflow rates on every split
 """
 
 import argparse
@@ -141,6 +142,21 @@ class MacenkoNormalizer:
         return self.normalize(image)[0]
 
 
+def reconstruction_overflows(normalizer: MacenkoNormalizer, image: Image.Image) -> bool:
+    """True when normalizing this patch overflows exp() in od_to_rgb (known edge case, left as is).
+
+    Seen on patches dominated by saturated pixels (a channel at 0, OD at its cap): their
+    concentrations are extreme, some reconstructed ODs are hugely negative and exp(-OD)
+    overflows. np.clip caps those values at full brightness; the patch is still normalized.
+    """
+    with np.errstate(over="raise"):
+        try:
+            normalizer.normalize(image)
+        except FloatingPointError:
+            return True
+    return False
+
+
 def fit_reference(images, min_tissue_fraction: float = 0.05) -> dict:
     """Median stain vectors and 99th-percentile concentrations over training patches only."""
     stains, maxima = [], []
@@ -248,15 +264,55 @@ def make_gallery(args) -> None:
           "results/tables/macenko_fallback.json")
 
 
+def make_check(args) -> None:
+    """Fallback and overflow rates of per-patch Macenko on every split.
+
+    Reads patch colors only (no labels, no model), after the method was frozen: it documents
+    a limitation and is not used to choose anything.
+    """
+    from src.data import load_dataset
+    from src.utils import save_json
+
+    dataset = load_dataset(args.data_root)
+    normalizer = MacenkoNormalizer.from_file()
+    results = {}
+    for split in ("train", "id_val", "val", "test"):
+        indices = sample_indices(dataset, split, args.n_patches, args.seed + 3)
+        fallbacks, overflows, saturated, overflow_saturation = 0, 0, 0, []
+        for i in indices:
+            image = dataset.get_input(i)
+            with np.errstate(over="ignore"):
+                fallbacks += not normalizer.normalize(image)[1]
+            saturation = (np.asarray(image.convert("RGB")).min(axis=2) == 0).mean()  # pixels with a channel at 0
+            saturated += saturation >= 0.5
+            if reconstruction_overflows(normalizer, image):
+                overflows += 1
+                overflow_saturation.append(float(saturation))
+        n = len(indices)
+        results[split] = {
+            "n": n, "fallbacks": fallbacks, "fallback_rate": fallbacks / n,
+            "overflow_patches": overflows, "overflow_rate": overflows / n,
+            "patches_at_least_half_saturated": int(saturated),
+            "min_saturated_pixel_share_of_overflow_patches": min(overflow_saturation, default=None),
+        }
+        print(f"{split:7s} {n} patches | fallback {fallbacks} ({fallbacks / n:.2%}) | overflow {overflows} "
+              f"({overflows / n:.2%}) | at least half saturated {saturated}")
+    results["sampling"] = {"patches_per_split": args.n_patches, "balanced_across_hospitals": True,
+                           "seed": args.seed + 3}
+    save_json(results, "results/tables/macenko_checks.json")
+    print("-> results/tables/macenko_checks.json")
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Fit the Macenko reference, or draw the visual checks.")
-    parser.add_argument("command", choices=["reference", "gallery"])
+    parser = argparse.ArgumentParser(description="Fit the Macenko reference, draw the visual checks, "
+                                                 "or measure fallback and overflow rates.")
+    parser.add_argument("command", choices=["reference", "gallery", "check"])
     parser.add_argument("--data-root", type=Path, default=None)
     parser.add_argument("--n-patches", type=int, default=999, help="Patches sampled (a multiple of 3 hospitals).")
     parser.add_argument("--sigma", type=float, default=0.05)
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
-    make_reference(args) if args.command == "reference" else make_gallery(args)
+    {"reference": make_reference, "gallery": make_gallery, "check": make_check}[args.command](args)
     return 0
 
 

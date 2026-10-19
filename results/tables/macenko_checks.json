@@ -1,0 +1,43 @@
+{
+  "train": {
+    "n": 9999,
+    "fallbacks": 0,
+    "fallback_rate": 0.0,
+    "overflow_patches": 3,
+    "overflow_rate": 0.00030003000300030005,
+    "patches_at_least_half_saturated": 29,
+    "min_saturated_pixel_share_of_overflow_patches": 0.4397786458333333
+  },
+  "id_val": {
+    "n": 9999,
+    "fallbacks": 1,
+    "fallback_rate": 0.00010001000100010001,
+    "overflow_patches": 3,
+    "overflow_rate": 0.00030003000300030005,
+    "patches_at_least_half_saturated": 42,
+    "min_saturated_pixel_share_of_overflow_patches": 0.4479166666666667
+  },
+  "val": {
+    "n": 9999,
+    "fallbacks": 0,
+    "fallback_rate": 0.0,
+    "overflow_patches": 3,
+    "overflow_rate": 0.00030003000300030005,
+    "patches_at_least_half_saturated": 21,
+    "min_saturated_pixel_share_of_overflow_patches": 0.5104166666666666
+  },
+  "test": {
+    "n": 9999,
+    "fallbacks": 0,
+    "fallback_rate": 0.0,
+    "overflow_patches": 0,
+    "overflow_rate": 0.0,
+    "patches_at_least_half_saturated": 0,
+    "min_saturated_pixel_share_of_overflow_patches": null
+  },
+  "sampling": {
+    "patches_per_split": 9999,
+    "balanced_across_hospitals": true,
+    "seed": 3
+  }
+}
