@@ -567,3 +567,39 @@ Elle dépend du découpage en tranches, et peut contredire le score de Brier : s
 l'ECE du CNN sans couleur de 0,126 à 0,150 alors que son Brier s'améliore (0,104 → 0,100). D'où les deux mesures. Le
 code a été vérifié de façon indépendante sur un run : ECE recalculée par une boucle explicite et température obtenue
 par une régression logistique de scikit-learn, identiques.
+
+**6. Intervalles de confiance par bootstrap sur les patients.**
+Chaque hôpital inconnu, ce sont 10 lames de 8 patients (`val`) ou de 9 patients (test). Un autre hôpital, avec d'autres
+patients, donnerait d'autres chiffres. Le bootstrap rejoue ce hasard : 2 000 fois, on re-tire les patients **avec
+remise** (certains deux fois, d'autres pas du tout), on garde tous leurs patches et on recalcule la métrique ; les 2,5e
+et 97,5e centiles donnent l'intervalle à 95 % (`python -m src.bootstrap`, `results/tables/bootstrap.csv`).
+- Des patients, pas des patches : les patches d'une lame partagent tissu et coloration, ils ne sont pas indépendants.
+  Un bootstrap sur 85 000 patches donnerait des intervalles absurdement étroits.
+- Des patients, pas des lames : deux lames d'un même patient partagent sa biologie (le patient 046 a deux lames dans
+  l'hôpital 2), même raisonnement que la validation croisée par patient de la phase 1.
+- Tirages **appariés** : toutes les méthodes reçoivent les mêmes tirages, ce qui donne aussi un intervalle sur leurs
+  différences (`results/tables/bootstrap_differences.csv`).
+- Chaque tirage utilise la moyenne des 4 graines : l'intervalle mesure le choix des patients, l'écart-type entre graines
+  mesure l'aléa d'entraînement ; ce sont deux sources d'incertitude différentes.
+
+**7. Ce que disent les intervalles.**
+Précision sur l'hôpital de test, avec intervalle à 95 % : sans couleur 66,1 [56,4 ; 86,0] ; HED 81,0 [73,7 ; 88,9] ;
+Macenko 93,5 [91,4 ; 94,9] ; DINO 92,1 [85,7 ; 95,5] ; Phikon 93,9 [84,0 ; 98,0] (`results/figures/bootstrap.png`).
+Différences appariées :
+- Macenko devance HED de 12,5 points [2,9 ; 19,3] : HED fait mieux dans 0,25 % des tirages seulement. Ce gain-là
+  résiste au choix des patients.
+- Les trois meilleurs sont **indiscernables** sur le test : Macenko − Phikon −0,4 [−6,1 ; +8,6], Macenko − DINO
+  +1,4 [−0,7 ; +5,6], DINO − Phikon −1,8 [−10,7 ; +7,1] ; leurs AUC diffèrent de moins de 0,001 en moyenne.
+- Sur `val`, au contraire, Phikon devance tous les autres (par exemple de 7,9 points [5,9 ; 9,0] sur Macenko), et HED
+  et Macenko sont indiscernables (+0,7 [−3,6 ; +4,0]).
+
+**8. Un patient pèse lourd.**
+La lame 28 (patient 051) contient 37 % des patches de l'hôpital de test et 63 % de ses patches tumoraux
+(`results/tables/slides.csv`). Une précision calculée sur tous les patches mélangés dépend donc beaucoup de ce
+patient : c'est pourquoi certains intervalles sont si larges (CNN sans couleur : 56 à 86 %). Un vrai rapport clinique
+donnerait aussi les résultats patient par patient.
+
+**9. Les limites de l'outil.**
+Avec 8 ou 9 patients, l'intervalle par centiles est approximatif et tend à être **trop étroit** : il est indicatif.
+Surtout, il mesure la variabilité des patients **à l'intérieur** d'un hôpital, pas d'un hôpital à l'autre : avec deux
+hôpitaux inconnus seulement, on ne sait pas comment ces méthodes se comporteraient sur un troisième.
