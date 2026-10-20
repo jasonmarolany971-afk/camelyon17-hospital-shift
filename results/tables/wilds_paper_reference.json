@@ -1,0 +1,8 @@
+{
+  "source": "Koh et al., WILDS: A Benchmark of in-the-Wild Distribution Shifts, ICML 2021",
+  "dataset": "Camelyon17-WILDS",
+  "method": "ERM, DenseNet-121 trained from scratch, model selection on the OOD validation hospital",
+  "note": "Transcribed from the paper, not produced by this project; used only as a reference point.",
+  "test_accuracy_mean": 0.703,
+  "test_accuracy_std": 0.064
+}
