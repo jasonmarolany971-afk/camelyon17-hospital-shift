@@ -1,0 +1,13 @@
+split,group,n_patches,errors,false_negatives,false_positives
+val,cnn_none,34904,4069,1343,2726
+val,cnn_hed,34904,3938,1583,2355
+val,cnn_macenko,34904,3166,2193,973
+val,probe_dino_vitb16,34904,2768,1526,1242
+val,probe_phikon,34904,1004,634,370
+val,all_methods_wrong,34904,218,152,66
+test,cnn_none,85054,43001,42314,687
+test,cnn_hed,85054,19497,18336,1161
+test,cnn_macenko,85054,4919,1587,3332
+test,probe_dino_vitb16,85054,6993,1168,5825
+test,probe_phikon,85054,5772,5104,668
+test,all_methods_wrong,85054,480,474,6

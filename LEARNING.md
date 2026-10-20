@@ -635,3 +635,42 @@ Sur `val`, Macenko a le moins bon classement par confiance des cinq méthodes (E
 0,002 pour Phikon) : même ses patches les plus sûrs contiennent des erreurs. C'est un deuxième indice, après la
 précision, que la difficulté de l'hôpital 1 n'est pas la couleur. Les galeries d'erreurs devront regarder ces erreurs
 sûres d'elles.
+
+**14. Galeries d'erreurs : regarder les images.**
+Graine 0 de chaque méthode, fixée à l'avance ; pour chaque hôpital inconnu, les faux négatifs et faux positifs les plus
+sûrs d'eux (`python -m src.explain`, `results/figures/errors_val.png` et `errors_test.png`). Ce sont des cas extrêmes,
+pas des erreurs typiques. Ce que l'on voit, à l'œil non expert (à faire confirmer par un pathologiste) :
+- Hôpital 2 : les tumeurs manquées par le CNN sans couleur et par HED sont des patches de la lame 28 occupés surtout par
+  de la graisse (grandes vacuoles blanches) avec peu de cellules ; celles manquées par Macenko, et par les cinq méthodes
+  à la fois, sont des patches de la lame 28 remplis de petits noyaux ronds et denses, qui ressemblent davantage à du
+  tissu lymphoïde qu'à un carcinome.
+- Hôpital 1 : HED et DINO manquent des zones roses presque sans noyaux de la lame 13, étiquetées tumeur (hypothèse :
+  de la nécrose à l'intérieur d'une tumeur).
+- Fausses alertes : stroma dense, tissu flou (lame 21 pour le CNN sans couleur), et même, pour DINO, un patch presque
+  entièrement vide (lame 25) déclaré tumeur à 100 %.
+
+**15. Les erreurs partagées : des candidats à une étiquette discutable.**
+Sur l'hôpital de test, 480 patches sont mal classés par les cinq méthodes, dont 474 tumeurs manquées : 236 viennent de
+la lame 28 et 151 de la lame 29 (`results/tables/error_overlap.csv`, `shared_errors_by_slide.csv`). Une erreur commise
+avec assurance par cinq modèles très différents vient plus probablement de l'image ou de l'étiquette que d'un modèle :
+l'étiquette d'un patch dérive d'un contour tracé à la main, et elle ne décrit que sa région centrale de 32 × 32 pixels.
+Ce sont des candidats à faire relire, pas une preuve d'erreur d'étiquette. Ils pèsent peu (0,6 % des patches de test),
+mais rappellent que la « vérité » d'un jeu de données médical est elle-même imparfaite.
+
+**16. Grad-CAM : où les CNN regardent.**
+Grad-CAM (Selvaraju et al., 2017) pondère chaque carte d'activation de la dernière couche par la moyenne du gradient du
+score « tumeur », puis garde la partie positive (`results/figures/gradcam.png`, mêmes patches pour les trois CNN). Sur
+l'hôpital 2, le CNN normalisé allume les zones cellulaires et laisse le fond blanc éteint ; le CNN sans couleur, qui
+rate ces tumeurs, n'a **aucune** case qui pousse vers « tumeur » (carte nulle), ce qui illustre son biais. Pour les
+tumeurs bien détectées, la case centrale porte 14 à 17 % de la carte, à peine plus que les 11 % d'une carte uniforme
+(`results/tables/gradcam_center.csv`) : les CNN utilisent tout le patch, pas seulement la région décrite par
+l'étiquette, ce qui est plausible puisqu'une zone tumorale dépasse en général 32 pixels.
+
+**17. Les limites de Grad-CAM.**
+- Résolution : sur un patch de 96 pixels, la dernière couche de DenseNet est une grille de 3 × 3 cases. On l'affiche
+  sans lissage, qui inventerait des détails.
+- Chaque case « voit » bien plus que ses 32 pixels : le champ récepteur des couches profondes couvre presque tout le
+  patch. La carte dit où se trouvent les activations utiles, pas quels pixels ont compté.
+- Chaque carte est ramenée à son propre maximum : on compare des formes, pas des intensités.
+- Une carte de saillance n'est pas une explication du raisonnement du modèle. Un test de bon sens classique (Adebayo et
+  al., 2018) vérifie que la carte change quand on remplace les poids par des poids aléatoires ; il n'a pas été fait ici.
