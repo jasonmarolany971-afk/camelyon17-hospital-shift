@@ -603,3 +603,35 @@ donnerait aussi les résultats patient par patient.
 Avec 8 ou 9 patients, l'intervalle par centiles est approximatif et tend à être **trop étroit** : il est indicatif.
 Surtout, il mesure la variabilité des patients **à l'intérieur** d'un hôpital, pas d'un hôpital à l'autre : avec deux
 hôpitaux inconnus seulement, on ne sait pas comment ces méthodes se comporteraient sur un troisième.
+
+**10. Abstention : la courbe risque–couverture.**
+Le modèle peut **ne pas répondre** et renvoyer un patch à un pathologiste. On classe les patches du plus sûr au moins
+sûr (confiance : distance de la probabilité à 0,5) ; la **couverture** est la part de patches auxquels le modèle
+répond, le **risque** le taux d'erreur parmi eux. Si la confiance est utile, le risque baisse quand on renvoie les
+patches les moins sûrs (`python -m src.abstention`, `results/figures/risk_coverage.png`). Deux résumés : l'**AURC**
+(aire sous la courbe, plus bas = mieux) mélange précision et qualité de la confiance ; l'**E-AURC** retire ce que ferait
+un oracle qui classerait toutes les erreurs en dernier, et isole la qualité du classement par confiance. La température
+ne change pas l'ordre des confiances : ces courbes sont les mêmes avant et après calibration.
+
+**11. Ce que donne un renvoi de 20 % des patches.**
+Seuil de confiance choisi sur `val` pour répondre à 80 % de ses patches, appliqué tel quel à l'hôpital de test
+(`results/tables/abstention_cutoffs.csv`, moyenne sur 4 graines) : erreur de 6,5 % → 2,2 % pour Macenko (83 % des
+patches traités), 7,9 % → 2,3 % pour DINO (79 %), 6,1 % → 1,0 % pour Phikon (70 %), mais 19,0 % → 10,8 % pour HED et
+33,9 % → 29,7 % pour le CNN sans couleur. Pour ce dernier, la confiance ne sert presque à rien sur l'hôpital 2 : ses
+erreurs sont **sûres d'elles** (E-AURC sur le test 0,116, contre 0,009 à 0,011 pour les trois meilleurs,
+`results/tables/risk_coverage.csv`). L'abstention aide un bon modèle ; elle ne sauve pas un modèle biaisé.
+
+**12. Une promesse de couverture se transporte mieux qu'une promesse d'erreur.**
+Seuil choisi sur `val` pour « au plus 2 % d'erreur », appliqué à l'hôpital de test : 0,4 % d'erreur pour Macenko (mais
+14 % de patches traités seulement), 1,5 % pour DINO, 2,5 % pour HED, **4,3 % pour Phikon** et 6,5 % pour le CNN sans
+couleur. La garantie d'erreur obtenue sur un hôpital ne vaut pas ailleurs, même pour le meilleur modèle. La couverture
+varie aussi, mais moins : le seuil « 80 % » donne entre 69 et 83 % sur le test selon les méthodes. Conséquences pour
+l'application : présenter la règle comme « le modèle renvoie les patches les moins sûrs (seuil réglé sur l'hôpital 1) »,
+jamais comme un taux d'erreur garanti ; et prévenir que la charge de relecture du pathologiste change d'un hôpital à
+l'autre.
+
+**13. Macenko et l'hôpital 1, encore.**
+Sur `val`, Macenko a le moins bon classement par confiance des cinq méthodes (E-AURC 0,037, contre 0,025 pour HED et
+0,002 pour Phikon) : même ses patches les plus sûrs contiennent des erreurs. C'est un deuxième indice, après la
+précision, que la difficulté de l'hôpital 1 n'est pas la couleur. Les galeries d'erreurs devront regarder ces erreurs
+sûres d'elles.

@@ -9,6 +9,9 @@ INK, INK_SOFT, AXIS, GRID, SURFACE = "#0b0b0b", "#52514e", "#c3c2b7", "#e1e0d9",
 # Categorical colors in a fixed order (validated for color-vision deficiencies).
 # A seed always gets the same color: COLORS[seed], never its rank in a plot.
 COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4"]
+# Figures with one line per configuration (no seeds shown): a fixed color per configuration.
+CONFIG_COLORS = {"cnn_none": INK_SOFT, "cnn_hed": "#eda100", "cnn_macenko": "#2a78d6",
+                 "probe_dino_vitb16": "#1baf7a", "probe_phikon": "#e87ba4"}
 
 
 def apply_style() -> None:
