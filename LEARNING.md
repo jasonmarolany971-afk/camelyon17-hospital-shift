@@ -521,3 +521,49 @@ devra être appliquée à chaque image dans l'application.
 > que ferait l'application face à une image d'un hôpital inconnu. Utiliser des images du test, même sans étiquettes,
 > serait de l'adaptation de domaine, un autre problème. Les seules mesures faites sur les couleurs du test (taux de
 > repli et de débordement) l'ont été après avoir figé la méthode, et ne servent à rien choisir.
+
+---
+
+## Phase 5 — Calibration, abstention, analyse des erreurs
+
+### Concepts clés
+
+**1. Calibration : la probabilité dit-elle vrai ?**
+Un modèle est calibré si, parmi les patches à qui il donne environ 80 % de probabilité de tumeur, environ 80 % sont des
+tumeurs. Trois mesures :
+- le **diagramme de fiabilité** : on découpe les probabilités en 15 tranches de même largeur et on compare, dans chaque
+  tranche, la probabilité moyenne à la part réelle de tumeurs (sur la diagonale : calibré) ;
+- l'**ECE** (*expected calibration error*) : l'écart moyen entre les deux, pondéré par le nombre de patches par tranche ;
+- le **score de Brier** : l'erreur quadratique moyenne de la probabilité, sans découpage en tranches.
+
+Précision et calibration sont deux qualités différentes : un modèle peut bien classer et annoncer des probabilités
+fausses. Pour un outil qui affiche une confiance à un médecin, la calibration compte autant que la précision.
+
+**2. Le *temperature scaling* (Guo et al., 2017).**
+On divise le logit par un seul nombre T, ajusté sur `val` en minimisant la log-loss. T > 1 adoucit un modèle trop sûr
+de lui, T < 1 durcit un modèle trop timide. Comme T ne change ni l'ordre des patches ni le signe du logit, l'AUC, les
+décisions au seuil 0,5 et le seuil choisi sur `val` restent identiques : toutes les métriques déjà publiées restent
+valables. Températures obtenues (`results/tables/calibration.csv`) : 1,3 à 1,5 pour les CNN (trop sûrs d'eux sur
+l'hôpital 1), 1,13 pour DINO, 0,85 pour Phikon (trop timide). Alternatives écartées : la méthode de Platt (pente et
+biais : le biais déplacerait les décisions) et la régression isotonique (non paramétrique, elle sur-apprend).
+
+**3. Résultat : une température apprise sur un hôpital ne se transporte pas.**
+ECE sur l'hôpital de test, avant → après la température ajustée sur l'hôpital 1 (moyenne sur 4 graines) :
+CNN sans couleur 0,294 → 0,261 ; HED 0,126 → 0,113 ; Macenko 0,046 → 0,067 ; DINO 0,070 → 0,073 ;
+Phikon 0,039 → 0,040. Sur les hôpitaux d'entraînement, la correction dégrade les CNN (HED 0,031 → 0,055 ; Macenko
+0,034 → 0,064). Explication (`results/figures/reliability.png`) : d'un hôpital à l'autre, l'erreur de calibration est
+surtout un **décalage** dans une direction propre à l'hôpital. Sur l'hôpital 2, les courbes du CNN sans couleur, de HED
+et de Phikon passent au-dessus de la diagonale (ils sous-estiment la tumeur), celles de DINO et de Macenko en dessous
+(ils la surestiment). Une température change l'échelle des probabilités, pas leur direction : elle ne peut pas
+corriger des décalages opposés. **La calibration est une propriété du couple (modèle, hôpital), pas du modèle seul.**
+
+**4. Conséquence pour l'application.**
+La probabilité affichée ne sera pas fiable sur un hôpital inconnu, même après correction ; on ne peut d'ailleurs pas
+vérifier une correction sans un troisième hôpital non vu. Le README devra le dire. Le seuil « à revoir par un
+pathologiste » doit donc s'appuyer sur ce qui se transporte mieux : le classement (AUC) et la courbe risque–couverture.
+
+**5. Les pièges de l'ECE.**
+Elle dépend du découpage en tranches, et peut contredire le score de Brier : sur `id_val`, la correction fait passer
+l'ECE du CNN sans couleur de 0,126 à 0,150 alors que son Brier s'améliore (0,104 → 0,100). D'où les deux mesures. Le
+code a été vérifié de façon indépendante sur un run : ECE recalculée par une boucle explicite et température obtenue
+par une régression logistique de scikit-learn, identiques.

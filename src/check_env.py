@@ -23,7 +23,7 @@ MIN_PYTHON = (3, 10)
 # Both exist at the same time during extraction, hence the margin.
 MIN_FREE_DISK_GB = 30
 # Import names (scikit-learn is imported as "sklearn", pyyaml as "yaml").
-PACKAGES = ["torch", "torchvision", "wilds", "numpy", "pandas", "sklearn", "matplotlib", "yaml"]
+PACKAGES = ["torch", "torchvision", "wilds", "numpy", "pandas", "sklearn", "scipy", "matplotlib", "yaml"]
 
 
 def report(level: str, name: str, message: str) -> None:
