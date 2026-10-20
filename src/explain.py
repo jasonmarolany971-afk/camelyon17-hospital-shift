@@ -52,8 +52,8 @@ def label(name: str) -> str:
     return LABELS.get(name, name).replace("\n", " ")
 
 
-def load_predictions(artifacts_dir: Path, name: str, split: str) -> pd.DataFrame:
-    path = artifacts_dir / name / f"seed{SEED}" / "predictions" / f"{split}.parquet"
+def load_predictions(runs_dir: Path, name: str, split: str) -> pd.DataFrame:
+    path = runs_dir / name / f"seed{SEED}" / "predictions" / f"{split}.parquet"
     return pd.read_parquet(path).sort_values("index").reset_index(drop=True)
 
 
@@ -229,7 +229,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Error galleries and Grad-CAM (seed 0).")
     parser.add_argument("names", nargs="+", help="Configuration names; CNNs (cnn_*) also get Grad-CAM")
     parser.add_argument("--data-root", type=Path, default=None)
-    parser.add_argument("--artifacts-dir", type=Path, default=Path("artifacts/runs"))
+    parser.add_argument("--runs-dir", type=Path, default=Path("results/runs"), help="Saved predictions")
+    parser.add_argument("--artifacts-dir", type=Path, default=Path("artifacts/runs"), help="CNN weights (Grad-CAM)")
+    parser.add_argument("--no-gradcam", action="store_true", help="Skip Grad-CAM (needs the CNN weights)")
     parser.add_argument("--results-dir", type=Path, default=Path("results"))
     parser.add_argument("--device", default="cpu", help="cpu by default: small job, reproducible")
     args = parser.parse_args()
@@ -237,7 +239,7 @@ def main() -> int:
     apply_style()
     dataset = load_dataset(args.data_root)
     figures, tables = args.results_dir / "figures", args.results_dir / "tables"
-    frames_by_split = {split: {name: load_predictions(args.artifacts_dir, name, split) for name in args.names}
+    frames_by_split = {split: {name: load_predictions(args.runs_dir, name, split) for name in args.names}
                        for split in SPLITS}
 
     overlap = overlap_table(frames_by_split)
@@ -248,7 +250,7 @@ def main() -> int:
     for split, frames in frames_by_split.items():
         plot_gallery(dataset, frames, split, figures / f"errors_{split}.png")
 
-    cnns = [name for name in args.names if name.startswith("cnn_")]
+    cnns = [] if args.no_gradcam else [name for name in args.names if name.startswith("cnn_")]
     device = torch.device(args.device)
     rng = np.random.default_rng(SEED)
     panels, center_rows = {}, []

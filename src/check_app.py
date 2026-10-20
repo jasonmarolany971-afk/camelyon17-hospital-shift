@@ -54,7 +54,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Check the demo app: same model, speed, heat-map sanity.")
     parser.add_argument("--data-root", type=Path, default=None)
     parser.add_argument("--app", type=Path, default=Path("app/app.py"))
-    parser.add_argument("--artifacts-dir", type=Path, default=Path("artifacts/runs"))
+    parser.add_argument("--runs-dir", type=Path, default=Path("results/runs"), help="Saved predictions")
     parser.add_argument("--n-patches", type=int, default=200)
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
@@ -62,7 +62,7 @@ def main() -> int:
     app = load_app(args.app)
     card = app.CARD
     run_seed = card["selection"]["chosen_seed"]
-    saved = pd.read_parquet(args.artifacts_dir / card["config"] / f"seed{run_seed}" / "predictions" / "val.parquet")
+    saved = pd.read_parquet(args.runs_dir / card["config"] / f"seed{run_seed}" / "predictions" / "val.parquet")
     sample = saved.sample(n=args.n_patches, random_state=args.seed)
     dataset = load_dataset(args.data_root)
     torch.set_num_threads(2)

@@ -1,19 +1,22 @@
 """Evaluate a trained run on id_val, val and test, globally and per hospital.
 
 Usage (from the repository root):
-    python -m src.evaluate --run-dir artifacts/runs/cnn_none/seed0
+    python -m src.evaluate --run-dir artifacts/runs/cnn_none/seed0          # model inference
+    python -m src.evaluate --from-results results/runs/cnn_none/seed0      # from the saved predictions
 
 Metrics: official WILDS accuracy, AUC, and sensitivity at a fixed specificity.
 The threshold for the latter is chosen on the OOD validation hospital (`val`)
 and applied unchanged to the other splits: the test hospital is only
 measured, never used to choose anything.
 
-Outputs:
-    <run-dir>/predictions/<split>.parquet   one row per patch (probability, label, hospital, slide)
-    results/runs/<name>/seed<seed>/metrics.json and history.csv
+Outputs, in results/runs/<name>/seed<seed>/ (versioned; model weights stay in artifacts/):
+    predictions/<split>.parquet   one row per patch (probability, label, hospital, slide)
+    metrics.json, history.csv, train_summary.json
+--from-results recomputes metrics.json from these files alone: no weights, no image, no GPU.
 """
 
 import argparse
+import json
 import shutil
 import sys
 from pathlib import Path
@@ -90,7 +93,7 @@ def official_accuracy_from_frame(dataset, frame: pd.DataFrame) -> float:
                              metadata)
 
 
-def predict_splits(checkpoint: dict, dataset, run_dir: Path, device_name, batch_size, num_workers, subset) -> dict:
+def predict_splits(checkpoint: dict, dataset, out_dir: Path, device_name, batch_size, num_workers, subset) -> dict:
     """Run the selected model on every evaluation split and save one parquet file per split."""
     config, seed = checkpoint["config"], checkpoint["seed"]
     device = get_device(device_name)
@@ -99,7 +102,7 @@ def predict_splits(checkpoint: dict, dataset, run_dir: Path, device_name, batch_
     model.to(device)
 
     transform = build_transform(config, train=False)
-    (run_dir / "predictions").mkdir(exist_ok=True)
+    (out_dir / "predictions").mkdir(parents=True, exist_ok=True)
     frames = {}
     for split in EVAL_SPLITS:
         split_subset = get_subset(dataset, split, transform, subset, seed=seed)
@@ -112,7 +115,7 @@ def predict_splits(checkpoint: dict, dataset, run_dir: Path, device_name, batch_
             "hospital": metadata[:, 0].numpy(),
             "slide": metadata[:, 1].numpy(),
         })
-        frames[split].to_parquet(run_dir / "predictions" / f"{split}.parquet", index=False)
+        frames[split].to_parquet(out_dir / "predictions" / f"{split}.parquet", index=False)
     return frames
 
 
@@ -139,24 +142,29 @@ def compute_metrics(dataset, frames: dict, checkpoint: dict, target_specificity:
 
 
 def evaluate_run(run_dir: Path, data_root=None, device_name=None, batch_size=256, num_workers=4,
-                 subset=None, target_specificity=0.95, results_root=Path("results/runs"),
-                 from_predictions=False) -> dict:
+                 subset=None, target_specificity=0.95, results_root=Path("results/runs")) -> dict:
     checkpoint = torch.load(run_dir / "best.pt", map_location="cpu")
     dataset = load_dataset(data_root)
-    if from_predictions:
-        # Recompute the metrics from the saved predictions: no model, no image, no GPU.
-        frames = {split: pd.read_parquet(run_dir / "predictions" / f"{split}.parquet") for split in EVAL_SPLITS}
-    else:
-        frames = predict_splits(checkpoint, dataset, run_dir, device_name, batch_size, num_workers, subset)
-    metrics = compute_metrics(dataset, frames, checkpoint, target_specificity)
-
     # Quick tests (--subset) stay next to the run; only full evaluations go to results/.
     out_dir = run_dir if subset else results_root / checkpoint["config"]["name"] / f"seed{checkpoint['seed']}"
+    frames = predict_splits(checkpoint, dataset, out_dir, device_name, batch_size, num_workers, subset)
+    metrics = compute_metrics(dataset, frames, checkpoint, target_specificity)
     save_json(metrics, out_dir / "metrics.json")
     if out_dir != run_dir:
         for name in ("history.csv", "train_summary.json"):
             shutil.copy(run_dir / name, out_dir / name)
     print(f"Metrics written to {out_dir / 'metrics.json'}")
+    return metrics
+
+
+def evaluate_from_results(results_run_dir: Path, data_root=None, target_specificity=0.95) -> dict:
+    """Recompute metrics.json from the saved predictions and train_summary.json: no weights, no image, no GPU."""
+    summary = json.loads((results_run_dir / "train_summary.json").read_text())
+    run = {"config": {"name": results_run_dir.parent.name}, "seed": int(results_run_dir.name.removeprefix("seed")),
+           "epoch": summary["best_epoch"]}
+    frames = {split: pd.read_parquet(results_run_dir / "predictions" / f"{split}.parquet") for split in EVAL_SPLITS}
+    metrics = compute_metrics(load_dataset(data_root), frames, run, target_specificity)
+    save_json(metrics, results_run_dir / "metrics.json")
     return metrics
 
 
@@ -173,22 +181,25 @@ def print_summary(metrics: dict) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Evaluate a trained run on id_val, val and test.")
-    parser.add_argument("--run-dir", type=Path, required=True)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--run-dir", type=Path, help="Run with best.pt: predict with the model.")
+    source.add_argument("--from-results", type=Path, help="results/runs/<name>/seed<N>: from the saved predictions.")
     parser.add_argument("--data-root", type=Path, default=None)
     parser.add_argument("--device", default=None, help="cuda, mps or cpu (default: best available)")
     parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--subset", type=int, default=None, help="Use N random patches per split (quick tests).")
     parser.add_argument("--target-specificity", type=float, default=0.95)
-    parser.add_argument("--from-predictions", action="store_true",
-                        help="Recompute the metrics from the saved predictions (no model inference).")
     args = parser.parse_args()
 
+    if args.from_results:
+        print_summary(evaluate_from_results(args.from_results, args.data_root, args.target_specificity))
+        return 0
     if not (args.run_dir / "best.pt").exists():
         print(f"No best.pt in {args.run_dir}: train the model first.")
         return 1
     metrics = evaluate_run(args.run_dir, args.data_root, args.device, args.batch_size, args.num_workers,
-                           args.subset, args.target_specificity, from_predictions=args.from_predictions)
+                           args.subset, args.target_specificity)
     print_summary(metrics)
     return 0
 

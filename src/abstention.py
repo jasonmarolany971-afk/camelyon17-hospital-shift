@@ -11,7 +11,7 @@ so these results hold before and after calibration.
 Referral cutoffs are chosen on val only, by two rules ("answer X% of val patches" or "at most Y%
 error on val"), then applied unchanged to id_val and test to see whether they transfer.
 
-Reads artifacts/runs/<name>/seed<N>/predictions/<split>.parquet and writes:
+Reads results/runs/<name>/seed<N>/predictions/<split>.parquet and writes:
     results/tables/risk_coverage.csv       AURC and E-AURC per (configuration, split): mean and std over seeds
     results/tables/abstention_cutoffs.csv  coverage and risk obtained with each val-chosen cutoff
     results/figures/risk_coverage.png      risk-coverage curves on id_val, val and test
@@ -154,15 +154,15 @@ def plot(curves: dict, cutoffs: pd.DataFrame, names: list[str], path: Path) -> N
 def main() -> int:
     parser = argparse.ArgumentParser(description="Risk-coverage curves and val-chosen referral cutoffs.")
     parser.add_argument("names", nargs="+", help="Configuration names, e.g. cnn_none probe_phikon")
-    parser.add_argument("--artifacts-dir", type=Path, default=Path("artifacts/runs"))
+    parser.add_argument("--runs-dir", type=Path, default=Path("results/runs"), help="Saved predictions")
     parser.add_argument("--results-dir", type=Path, default=Path("results"))
     args = parser.parse_args()
 
     curve_rows, cutoff_rows, curves = [], [], {}
     for name in args.names:
-        runs = find_runs(args.artifacts_dir, name)
+        runs = find_runs(args.runs_dir, name)
         if not runs:
-            raise SystemExit(f"No predictions in {args.artifacts_dir / name}")
+            raise SystemExit(f"No predictions in {args.runs_dir / name}")
         curves[name] = {split: [] for split in SPLITS}
         for seed, run_dir in runs.items():
             rows, cuts, run_curves = analyze_run(run_dir)

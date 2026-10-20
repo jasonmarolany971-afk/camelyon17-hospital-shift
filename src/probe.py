@@ -13,8 +13,8 @@ split only. The test split is loaded only after training, to evaluate the
 selected epoch once, with the threshold chosen on `val`.
 
 Outputs, in the same layout as the CNN (so src/aggregate.py works unchanged):
-    artifacts/runs/<name>/seed<seed>/   best.pt, history.csv, train_summary.json, predictions/<split>.parquet
-    results/runs/<name>/seed<seed>/     metrics.json, history.csv, train_summary.json
+    artifacts/runs/<name>/seed<seed>/   best.pt, history.csv, train_summary.json
+    results/runs/<name>/seed<seed>/     predictions/<split>.parquet, metrics.json, history.csv, train_summary.json
 """
 
 import argparse
@@ -146,7 +146,8 @@ def main() -> int:
 
     # Training is over: only now is the test split loaded, to evaluate the selected epoch once.
     model.load_state_dict(best_state)
-    (run_dir / "predictions").mkdir(exist_ok=True)
+    out_dir = args.results_dir / config["name"] / f"seed{args.seed}"
+    (out_dir / "predictions").mkdir(parents=True, exist_ok=True)
     frames = {}
     for split in EVAL_SPLITS:
         part = monitored[split] if split in monitored else load_split(features_dir, split, dataset)
@@ -157,10 +158,9 @@ def main() -> int:
             "index": part["index"], "y": part["y"].numpy(), "prob": tumor_probability(model, part["x"]).numpy(),
             "hospital": metadata[:, 0], "slide": metadata[:, 1],
         })
-        frames[split].to_parquet(run_dir / "predictions" / f"{split}.parquet", index=False)
+        frames[split].to_parquet(out_dir / "predictions" / f"{split}.parquet", index=False)
 
     metrics = compute_metrics(dataset, frames, checkpoint, target_specificity=0.95)
-    out_dir = args.results_dir / config["name"] / f"seed{args.seed}"
     save_json(metrics, out_dir / "metrics.json")
     for name in ("history.csv", "train_summary.json"):
         shutil.copy(run_dir / name, out_dir / name)

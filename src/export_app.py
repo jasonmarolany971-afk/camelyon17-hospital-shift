@@ -78,7 +78,7 @@ def draw_examples(dataset, seed: int = 0) -> list[dict]:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Export the demo app's model and examples.")
     parser.add_argument("--data-root", type=Path, default=None)
-    parser.add_argument("--artifacts-dir", type=Path, default=Path("artifacts/runs"))
+    parser.add_argument("--artifacts-dir", type=Path, default=Path("artifacts/runs"), help="Weights (best.pt)")
     parser.add_argument("--results-dir", type=Path, default=Path("results"))
     parser.add_argument("--app-dir", type=Path, default=Path("app"))
     args = parser.parse_args()
@@ -89,8 +89,8 @@ def main() -> int:
     checkpoint = torch.load(run_dir / "best.pt", map_location="cpu")
     calibration = json.loads((runs / CONFIG / f"seed{seed}" / "calibration.json").read_text())
     metrics = json.loads((runs / CONFIG / f"seed{seed}" / "metrics.json").read_text())
-    val = pd.read_parquet(run_dir / "predictions" / "val.parquet")
-    test = pd.read_parquet(run_dir / "predictions" / "test.parquet")
+    val = pd.read_parquet(runs / CONFIG / f"seed{seed}" / "predictions" / "val.parquet")
+    test = pd.read_parquet(runs / CONFIG / f"seed{seed}" / "predictions" / "test.parquet")
     cutoff = referral_cutoff(val.prob)
     confidence_cutoff = cutoff_for_coverage(val.prob, COVERAGE)  # same cutoff, in probability units
 

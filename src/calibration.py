@@ -3,7 +3,7 @@
 Usage (from the repository root):
     python -m src.calibration cnn_none cnn_hed cnn_macenko probe_dino_vitb16 probe_phikon
 
-For every run (configuration, seed), reads artifacts/runs/<name>/seed<N>/predictions/<split>.parquet,
+For every run (configuration, seed), reads results/runs/<name>/seed<N>/predictions/<split>.parquet,
 fits one temperature on val only, and writes:
     results/runs/<name>/seed<N>/calibration.json  temperature, ECE and Brier score before and after
                                                    scaling, per split and per hospital
@@ -107,9 +107,9 @@ def calibrate_run(run_dir: Path) -> tuple[dict, dict[str, pd.DataFrame]]:
     return result, frames
 
 
-def find_runs(artifacts_dir: Path, name: str) -> dict[int, Path]:
+def find_runs(runs_dir: Path, name: str) -> dict[int, Path]:
     runs = {}
-    for folder in (artifacts_dir / name).glob("seed*"):
+    for folder in (runs_dir / name).glob("seed*"):
         match = re.fullmatch(r"seed(\d+)", folder.name)  # skips quick tests such as seed0-subset512
         if match and all((folder / "predictions" / f"{s}.parquet").exists() for s in SPLITS):
             runs[int(match.group(1))] = folder
@@ -178,15 +178,15 @@ def plot(curves: dict, summary: pd.DataFrame, names: list[str], path: Path) -> N
 def main() -> int:
     parser = argparse.ArgumentParser(description="Temperature scaling on val; calibration before and after.")
     parser.add_argument("names", nargs="+", help="Configuration names, e.g. cnn_none probe_phikon")
-    parser.add_argument("--artifacts-dir", type=Path, default=Path("artifacts/runs"))
+    parser.add_argument("--runs-dir", type=Path, default=Path("results/runs"), help="Saved predictions")
     parser.add_argument("--results-dir", type=Path, default=Path("results"))
     args = parser.parse_args()
 
     records, curves = [], {}
     for name in args.names:
-        runs = find_runs(args.artifacts_dir, name)
+        runs = find_runs(args.runs_dir, name)
         if not runs:
-            raise SystemExit(f"No predictions in {args.artifacts_dir / name}")
+            raise SystemExit(f"No predictions in {args.runs_dir / name}")
         pooled = {split: [] for split in SPLITS}
         for seed, run_dir in runs.items():
             result, frames = calibrate_run(run_dir)

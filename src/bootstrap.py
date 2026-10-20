@@ -15,7 +15,7 @@ the metrics of every run. 2,000 replicates give a 95% percentile interval.
   reported separately (std in results/tables/comparison.csv).
 With 8 or 9 clusters the percentile interval is approximate and tends to be too narrow.
 
-Reads artifacts/runs/<name>/seed<N>/predictions/{val,test}.parquet and the patient IDs in
+Reads results/runs/<name>/seed<N>/predictions/{val,test}.parquet and the patient IDs in
 <data-root>/camelyon17_v1.0/metadata.csv (rows in dataset order); writes:
     results/tables/bootstrap.csv              estimate and 95% interval per (configuration, split, metric)
     results/tables/bootstrap_differences.csv  every pair of configurations: difference and its interval
@@ -80,15 +80,15 @@ def load_patients(data_root: Path) -> np.ndarray:
     return pd.read_csv(metadata, usecols=["patient"], dtype={"patient": str}).patient.to_numpy()
 
 
-def bootstrap(names: list[str], artifacts_dir: Path, patients: np.ndarray, n_replicates: int, seed: int):
+def bootstrap(names: list[str], runs_dir: Path, patients: np.ndarray, n_replicates: int, seed: int):
     """(estimates, replicates, n_patients): seed means on the full split, and on every replicate."""
     estimates, replicates, n_patients = {}, {}, {}
     for split_number, split in enumerate(SPLITS):
         reference_index = weights = None
         for name in names:
-            runs = find_runs(artifacts_dir, name)
+            runs = find_runs(runs_dir, name)
             if not runs:
-                raise SystemExit(f"No predictions in {artifacts_dir / name}")
+                raise SystemExit(f"No predictions in {runs_dir / name}")
             per_seed_estimates, per_seed_replicates = [], []
             for run_dir in runs.values():
                 frame = pd.read_parquet(run_dir / "predictions" / f"{split}.parquet").sort_values("index")
@@ -173,14 +173,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Cluster bootstrap over patients on val and test.")
     parser.add_argument("names", nargs="+", help="Configuration names, e.g. cnn_none probe_phikon")
     parser.add_argument("--data-root", type=Path, default=None)
-    parser.add_argument("--artifacts-dir", type=Path, default=Path("artifacts/runs"))
+    parser.add_argument("--runs-dir", type=Path, default=Path("results/runs"), help="Saved predictions")
     parser.add_argument("--results-dir", type=Path, default=Path("results"))
     parser.add_argument("--replicates", type=int, default=2000)
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
 
     patients = load_patients(args.data_root or default_data_root())
-    estimates, replicates, n_patients = bootstrap(args.names, args.artifacts_dir, patients, args.replicates, args.seed)
+    estimates, replicates, n_patients = bootstrap(args.names, args.runs_dir, patients, args.replicates, args.seed)
     table = interval_table(args.names, estimates, replicates, n_patients, args.replicates)
     differences = difference_table(args.names, estimates, replicates)
     tables = args.results_dir / "tables"
