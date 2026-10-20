@@ -32,6 +32,9 @@ tqdm>=4.66
 # Stain analysis (HED color space), later HED augmentation
 scikit-image>=0.24
 
+# Demo app (app/app.py; the Space has its own app/requirements.txt)
+gradio>=6.30
+
 # Notebooks and tests
 ipykernel>=6.29
 nbconvert>=7

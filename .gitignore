@@ -22,3 +22,6 @@ kaggle.json
 
 # Training logs written by src.run_jobs
 logs/
+
+# Claude Code local preview configuration
+.claude/
