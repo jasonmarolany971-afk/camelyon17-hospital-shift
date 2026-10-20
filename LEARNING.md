@@ -441,7 +441,83 @@ Décision : code inchangé pour les graines 2 et 3, car les quatre graines doive
 Une correction (exclure ou plafonner les pixels saturés) changerait la méthode et obligerait à réentraîner les quatre
 graines ; c'est une limite documentée.
 
-### Résultats Macenko et questions d'entretien
+### Résultats : les trois conditions de couleur
 
-À compléter quand les quatre graines `cnn_macenko` seront terminées : comparaison des trois conditions de couleur,
-puis trois questions d'entretien avec leurs réponses.
+**11. Macenko : un CNN entraîné de zéro rejoint les modèles de fondation sur l'hôpital 2.**
+Quatre graines par condition, époque et seuil choisis sur `val` (`results/tables/comparison.csv`,
+`results/tables/summary_cnn_*.csv`) :
+
+| Mesure | Sans couleur | HED-light | Macenko |
+|---|---|---|---|
+| Précision, hôpital de test (2) | 66,1 % ± 14,9 | 81,0 % ± 5,1 | 93,5 % ± 1,1 |
+| Pire graine, hôpital de test | 49,4 % | 77,1 % | 91,8 % |
+| AUC, hôpital de test | 0,817 | 0,918 | 0,986 |
+| Sensibilité au seuil choisi sur `val`, hôpital de test | 17,3 % | 46,2 % | 96,0 % |
+| Part déclarée « tumeur » sur le test (vraie part : 50 %) | 18,7 % | 36,1 % | 51,5 % |
+| Précision sur `val` (hôpital 1) | 88,2 % ± 0,7 | 89,9 % ± 1,0 | 89,2 % ± 1,6 |
+| Précision en distribution (`id_val`) | 87,2 % ± 15,2 | 96,5 % ± 1,3 | 96,1 % ± 1,3 |
+
+Sur l'hôpital 2, le CNN normalisé atteint le niveau des têtes linéaires sur caractéristiques figées (DINO 92,1 %,
+Phikon 93,9 %), avec la même AUC (0,986), et le biais de seuil disparaît (51,5 % de patches déclarés tumeur pour 50 %).
+Pour cet hôpital, l'obstacle principal du CNN était donc la couleur. Hypothèse sur l'écart avec HED : la normalisation
+supprime le décalage au moment de la prédiction, alors que l'augmentation légère (± 5 %) élargit peu la distribution
+d'entraînement ; HED-strong (σ = 0,2) n'a pas été testé, c'est une limite.
+
+**12. Ce que la normalisation ne règle pas : l'hôpital 1.**
+Sur `val`, Macenko (89,2 %) fait à peine mieux que le CNN sans couleur (88,2 %), alors que Phikon atteint 97,1 %. La
+difficulté de l'hôpital 1 n'est donc probablement pas (seulement) la couleur : netteté, épaisseur des coupes, types de
+tissu ? C'est une question ouverte pour les galeries d'erreurs de la phase 5. Et la précision sur `val` varie beaucoup
+d'une époque à l'autre (de 69 à 91 % selon les graines, `results/figures/curves_cnn_macenko.png`) : l'époque choisie
+dépend en partie du hasard.
+
+**13. `val` ne classe pas les méthodes comme le test.**
+Sur `val`, HED devance Macenko de 0,7 point ; sur le test, Macenko gagne de 12,5 points. Si l'on avait dû choisir la
+méthode de couleur sur `val`, on aurait pris HED, à un écart qui relève du bruit. Un seul hôpital de validation est un
+guide faible pour choisir entre méthodes. Conséquences : on rapporte **toutes** les méthodes, sans en sélectionner une
+d'après le test ; et pour choisir le modèle de l'application (phase 6), il faudra un critère défini sur `val` ou fixé à
+l'avance, jamais « le meilleur sur le test ». Une piste plus solide pour un vrai projet : plusieurs hôpitaux de
+validation (validation croisée en laissant un hôpital de côté à chaque fois).
+
+**14. Significativité : quatre comparaisons, prudence.**
+Tests t de Welch sur les quatre précisions par graine sur le test (calculés à partir des valeurs des fichiers
+`summary_*.csv`) : Macenko contre sans couleur p = 0,035 ; contre HED p = 0,014 ; contre DINO p = 0,085 ; contre Phikon
+p = 0,61. Avec quatre tests, la correction de Bonferroni demande p < 0,05 / 4 = 0,0125 : aucun ne passe strictement.
+Un argument plus simple : les graines ne se chevauchent pas (pire graine Macenko 91,8 %, meilleure graine HED 88,5 %,
+meilleure graine sans couleur 81,9 %). Conclusion honnête : Macenko dépasse nettement HED et l'absence de traitement
+sur l'hôpital 2 ; on ne peut pas le départager des modèles de fondation. Toujours avec la limite des graines : elles ne
+mesurent pas le choix des patients de test (bootstrap par lame en phase 5).
+
+**15. Le prix de la normalisation à la volée.**
+Durée d'entraînement de 10 époques sur une T4 (`train_minutes`) : environ 144 min sans couleur, 180 à 202 avec HED,
+278 à 283 avec Macenko, soit environ deux fois plus que sans couleur. Et la même normalisation, avec la même référence,
+devra être appliquée à chaque image dans l'application.
+
+### Questions d'entretien
+
+**Q1. Augmentation de couleur ou normalisation de couleur : laquelle avez-vous retenue, et pourquoi ?**
+*(EN: Stain augmentation or stain normalization: which one did you pick, and why?)*
+
+> J'ai testé les deux, avec quatre graines chacune et le même protocole. L'augmentation HED, appliquée seulement à
+> l'entraînement, fait passer l'hôpital de test de 66 à 81 % ; la normalisation de Macenko, appliquée à chaque image à
+> l'entraînement comme à l'inférence, l'amène à 93,5 %, au niveau des modèles de fondation figés, avec un écart-type
+> de 1 point au lieu de 15. Mais elle n'améliore presque pas l'hôpital de validation (89 % contre 88 %), et elle
+> double le temps d'entraînement.
+> Ce n'est pas un choix universel : c'est le résultat sur cet hôpital, avec une seule intensité d'augmentation testée.
+
+**Q2. Votre hôpital de validation classe HED devant Macenko, le test dit l'inverse. Que faites-vous ?**
+*(EN: Your validation hospital ranks HED above Macenko, but the test says the opposite. What do you do?)*
+
+> Je ne change pas de méthode d'après le test : sinon le test cesse de mesurer la généralisation, il devient un second
+> jeu de validation. Je rapporte les deux résultats, et je constate qu'un seul hôpital de validation est un mauvais
+> guide pour choisir entre méthodes (0,7 point d'écart sur `val`, 12,5 sur le test). Pour un vrai déploiement,
+> j'utiliserais plusieurs hôpitaux de validation, en laissant un hôpital de côté à chaque fois, et je fixerais le
+> critère de choix avant de regarder le test.
+
+**Q3. Comment vous assurez-vous que la normalisation ne fait pas fuiter d'information de l'hôpital de test ?**
+*(EN: How do you make sure stain normalization does not leak information from the test hospital?)*
+
+> La référence de couleur est calculée sur 999 patches d'entraînement seulement, puis figée dans un fichier versionné.
+> Chaque patch est normalisé seul, sans statistique calculée sur d'autres images de son hôpital : c'est exactement ce
+> que ferait l'application face à une image d'un hôpital inconnu. Utiliser des images du test, même sans étiquettes,
+> serait de l'adaptation de domaine, un autre problème. Les seules mesures faites sur les couleurs du test (taux de
+> repli et de débordement) l'ont été après avoir figé la méthode, et ne servent à rien choisir.

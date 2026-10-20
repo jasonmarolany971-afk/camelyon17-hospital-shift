@@ -1,6 +1,6 @@
 {
-  "pearson_val_vs_id_val_over_all_epochs": 0.5189469217179561,
-  "n_points": 20,
+  "pearson_val_vs_id_val_over_all_epochs": 0.5462759859358223,
+  "n_points": 40,
   "per_seed": {
     "seed0": {
       "selected_epoch": 6,
@@ -15,6 +15,20 @@
       "val_acc_median_over_epochs": 0.848713606595993,
       "id_val_acc": 0.9685041904449464,
       "id_val_acc_median_over_epochs": 0.9659714102745056
+    },
+    "seed2": {
+      "selected_epoch": 2,
+      "val_acc": 0.9012720584869384,
+      "val_acc_median_over_epochs": 0.8292316198348999,
+      "id_val_acc": 0.9647198915481568,
+      "id_val_acc_median_over_epochs": 0.9560488760471344
+    },
+    "seed3": {
+      "selected_epoch": 5,
+      "val_acc": 0.8809592127799988,
+      "val_acc_median_over_epochs": 0.8398607671260834,
+      "id_val_acc": 0.940941572189331,
+      "id_val_acc_median_over_epochs": 0.9628724753856659
     }
   }
 }

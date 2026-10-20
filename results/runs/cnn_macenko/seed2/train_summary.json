@@ -1,0 +1,12 @@
+{
+  "run_dir": "/kaggle/working/artifacts/runs/cnn_macenko/seed2",
+  "best_epoch": 2,
+  "best_val_acc": 0.9012720584869385,
+  "epochs": 10,
+  "train_minutes": 277.65465034246444,
+  "device": "cuda",
+  "amp": false,
+  "code_commit": "e2da997",
+  "torch": "2.11.0+cu128",
+  "python": "3.13.15"
+}
