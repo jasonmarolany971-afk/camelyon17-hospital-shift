@@ -1,0 +1,147 @@
+{
+  "config": "probe_phikon",
+  "selection": {
+    "rule": "probe_phikon: best method on val accuracy (mean of 4 seeds); seed: highest val accuracy. Test never used to choose.",
+    "val_accuracy_by_seed": {
+      "0": 0.9712353944778442,
+      "1": 0.9700034260749817,
+      "2": 0.9710062146186829,
+      "3": 0.9711207747459412
+    },
+    "chosen_seed": 0,
+    "selected_epoch": 3
+  },
+  "this_run": {
+    "id_val": {
+      "accuracy": 0.9896305125148986,
+      "auc": 0.9992826921599329
+    },
+    "val": {
+      "accuracy": 0.9712353884941554,
+      "auc": 0.9950956850626839
+    },
+    "test": {
+      "accuracy": 0.9321372304653515,
+      "auc": 0.9850156097435344
+    }
+  },
+  "method_test_accuracy_ci95_over_patients": [
+    0.840106075446835,
+    0.980415756931894
+  ],
+  "method_test_accuracy_mean_over_seeds": 0.938700707785642,
+  "temperature": {
+    "value": 0.8749089232619707,
+    "fitted_on": "val (hospital 1)",
+    "ece_test_before_after": [
+      0.044060491041966264,
+      0.04561519323866542
+    ]
+  },
+  "referral": {
+    "rule": "refer the patches whose |logit| is below the cutoff answering 80% of val patches",
+    "val": {
+      "answered": 0.800022920009168,
+      "error_when_answered": 0.0035811488325454806,
+      "error_without_referral": 0.0287646115058446
+    },
+    "test": {
+      "answered": 0.6803207374138782,
+      "error_when_answered": 0.010282731923130098,
+      "error_without_referral": 0.06786276953464858
+    }
+  },
+  "code_commit": "52d718e",
+  "examples": [
+    {
+      "index": 25318,
+      "hospital": 0,
+      "split": "train",
+      "role": "training",
+      "label": "tumor",
+      "slide": 8,
+      "file": "hospital0_tumor.png"
+    },
+    {
+      "index": 246879,
+      "hospital": 0,
+      "split": "train",
+      "role": "training",
+      "label": "normal",
+      "slide": 9,
+      "file": "hospital0_normal.png"
+    },
+    {
+      "index": 38638,
+      "hospital": 1,
+      "split": "val",
+      "role": "validation (unseen in training)",
+      "label": "tumor",
+      "slide": 13,
+      "file": "hospital1_tumor.png"
+    },
+    {
+      "index": 262403,
+      "hospital": 1,
+      "split": "val",
+      "role": "validation (unseen in training)",
+      "label": "normal",
+      "slide": 11,
+      "file": "hospital1_normal.png"
+    },
+    {
+      "index": 60261,
+      "hospital": 2,
+      "split": "test",
+      "role": "test (unseen)",
+      "label": "tumor",
+      "slide": 28,
+      "file": "hospital2_tumor.png"
+    },
+    {
+      "index": 276889,
+      "hospital": 2,
+      "split": "test",
+      "role": "test (unseen)",
+      "label": "normal",
+      "slide": 27,
+      "file": "hospital2_normal.png"
+    },
+    {
+      "index": 94592,
+      "hospital": 3,
+      "split": "train",
+      "role": "training",
+      "label": "tumor",
+      "slide": 38,
+      "file": "hospital3_tumor.png"
+    },
+    {
+      "index": 318753,
+      "hospital": 3,
+      "split": "train",
+      "role": "training",
+      "label": "normal",
+      "slide": 36,
+      "file": "hospital3_normal.png"
+    },
+    {
+      "index": 167458,
+      "hospital": 4,
+      "split": "train",
+      "role": "training",
+      "label": "tumor",
+      "slide": 48,
+      "file": "hospital4_tumor.png"
+    },
+    {
+      "index": 442298,
+      "hospital": 4,
+      "split": "train",
+      "role": "training",
+      "label": "normal",
+      "slide": 44,
+      "file": "hospital4_normal.png"
+    }
+  ]
+}

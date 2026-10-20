@@ -1,0 +1,19 @@
+{
+  "run": "probe_phikon/seed0",
+  "same_model": {
+    "n_val_patches": 200,
+    "max_abs_probability_gap": 0.0016047358512878418,
+    "mean_abs_probability_gap": 7.089386263032793e-05,
+    "same_decision_share": 1.0
+  },
+  "speed_cpu_2_threads": {
+    "machine": "Darwin arm64",
+    "seconds_per_image_mean": 0.04795992837448946,
+    "seconds_per_image_max": 0.05334104195935652
+  },
+  "heat_map_randomization": {
+    "n_patches": 50,
+    "spearman_original_vs_random_last_block_mean": 0.06860985135273934,
+    "note": "close to 0: the map depends on the learned weights"
+  }
+}
