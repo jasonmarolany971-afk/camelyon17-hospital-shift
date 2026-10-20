@@ -145,7 +145,7 @@ def hide_axes(ax) -> None:
 
 
 def plot_gallery(dataset, frames: dict[str, pd.DataFrame], split: str, path: Path) -> None:
-    rows = [(label(name), {"fn": most_confident_errors(f, "fn", N_PER_KIND), "fp": most_confident_errors(f, "fp", N_PER_KIND)})
+    rows = [(label(name), {kind: most_confident_errors(f, kind, N_PER_KIND) for kind in ("fn", "fp")})
             for name, f in frames.items()]
     shared = shared_errors(frames)
     rows.append((f"All {len(frames)} wrong\n(mean probability)",
@@ -217,8 +217,9 @@ def plot_gradcam(dataset, panels: dict, path: Path) -> None:
             row += 1
     fig.suptitle(f"Grad-CAM for the tumor class, last DenseNet block (3 x 3 cells), seed {SEED}", x=0.01, ha="left",
                  fontsize=11, fontweight="bold")
-    fig.text(0.01, 0.0, "Amber: cells whose activations push towards 'tumor' (more opaque = stronger; each map scaled to "
-             "its own maximum, no smoothing). Each cell's activations\nalso see beyond the cell: deep layers have large "
+    fig.text(0.01, 0.0, "Amber: cells whose activations push towards 'tumor' (more opaque = stronger; "
+             "each map scaled to its own maximum, no smoothing). Each cell's activations\n"
+             "also see beyond the cell: deep layers have large "
              "receptive fields. Dashed square: the central 32 x 32 region the label describes. Same random "
              "patches for every CNN; p: predicted tumor probability.", color=INK_SOFT, fontsize=8, va="top")
     fig.savefig(path)
@@ -245,7 +246,8 @@ def main() -> int:
     overlap = overlap_table(frames_by_split)
     overlap.to_csv(tables / "error_overlap.csv", index=False)
     by_slide = pd.concat([shared_errors(frames).assign(split=split) for split, frames in frames_by_split.items()])
-    by_slide = by_slide.groupby(["split", "slide"]).agg(shared_false_negatives=("y", "sum"), shared_errors=("y", "size"))
+    by_slide = by_slide.groupby(["split", "slide"]).agg(shared_false_negatives=("y", "sum"),
+                                                        shared_errors=("y", "size"))
     by_slide.reset_index().to_csv(tables / "shared_errors_by_slide.csv", index=False)
     for split, frames in frames_by_split.items():
         plot_gallery(dataset, frames, split, figures / f"errors_{split}.png")
@@ -257,7 +259,8 @@ def main() -> int:
     models = {name: load_cnn(args.artifacts_dir, name, device) for name in cnns}
     for split in SPLITS:
         reference = next(iter(frames_by_split[split].values()))
-        tumor = rng.choice(reference[reference.y == 1]["index"].to_numpy(), N_CAM_TUMOR + N_CENTER_SAMPLE, replace=False)
+        tumor_pool = reference[reference.y == 1]["index"].to_numpy()
+        tumor = rng.choice(tumor_pool, N_CAM_TUMOR + N_CENTER_SAMPLE, replace=False)
         normal = rng.choice(reference[reference.y == 0]["index"].to_numpy(), N_CAM_NORMAL, replace=False)
         shown = list(tumor[:N_CAM_TUMOR]) + list(normal)
         panels[split] = {"indices": shown, "labels": [1] * N_CAM_TUMOR + [0] * N_CAM_NORMAL, "maps": {}, "probs": {}}

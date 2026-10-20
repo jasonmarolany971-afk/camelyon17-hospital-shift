@@ -107,21 +107,25 @@ def main() -> int:
         "referral_abs_logit": cutoff,
     }
     bootstrap = pd.read_csv(args.results_dir / "tables" / "bootstrap.csv")
-    test_ci = bootstrap[(bootstrap.config == CONFIG) & (bootstrap.split == "test") & (bootstrap.metric == "accuracy")].iloc[0]
+    test_ci = bootstrap[(bootstrap.config == CONFIG) & (bootstrap.split == "test")
+                        & (bootstrap.metric == "accuracy")].iloc[0]
     val_coverage, val_risk = apply_cutoff(val.prob, val.y, confidence_cutoff)
     test_coverage, test_risk = apply_cutoff(test.prob, test.y, confidence_cutoff)
     card = {
         "config": CONFIG,
         "selection": {"rule": "probe_phikon: best method on val accuracy (mean of 4 seeds); seed: highest val "
                               "accuracy. Test never used to choose.",
-                      "val_accuracy_by_seed": val_accuracy, "chosen_seed": seed, "selected_epoch": metrics["selected_epoch"]},
-        "this_run": {split: {k: metrics["splits"][split][k] for k in ("accuracy", "auc")} for split in ("id_val", "val", "test")},
+                      "val_accuracy_by_seed": val_accuracy, "chosen_seed": seed,
+                      "selected_epoch": metrics["selected_epoch"]},
+        "this_run": {split: {k: metrics["splits"][split][k] for k in ("accuracy", "auc")}
+                     for split in ("id_val", "val", "test")},
         "method_test_accuracy_ci95_over_patients": [test_ci.ci_low, test_ci.ci_high],
         "method_test_accuracy_mean_over_seeds": test_ci.estimate,
         "temperature": {"value": calibration["temperature"], "fitted_on": "val (hospital 1)",
                         "ece_test_before_after": [calibration["splits"]["test"]["all"]["ece_raw"],
                                                   calibration["splits"]["test"]["all"]["ece_scaled"]]},
-        "referral": {"rule": f"refer the patches whose |logit| is below the cutoff answering {COVERAGE:.0%} of val patches",
+        "referral": {"rule": f"refer the patches whose |logit| is below the cutoff answering {COVERAGE:.0%} "
+                             "of val patches",
                      "val": {"answered": val_coverage, "error_when_answered": val_risk,
                              "error_without_referral": float(((val.prob > 0.5) != (val.y == 1)).mean())},
                      "test": {"answered": test_coverage, "error_when_answered": test_risk,

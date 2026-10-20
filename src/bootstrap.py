@@ -131,7 +131,8 @@ def difference_table(names, estimates, replicates) -> pd.DataFrame:
                 low, high = np.percentile(difference, [2.5, 97.5])
                 rows.append({"split": split, "metric": metric, "config_a": a, "config_b": b,
                              "difference": estimates[(a, split, metric)] - estimates[(b, split, metric)],
-                             "ci_low": low, "ci_high": high, "share_replicates_a_better": float(np.mean(difference > 0))})
+                             "ci_low": low, "ci_high": high,
+                             "share_replicates_a_better": float(np.mean(difference > 0))})
     return pd.DataFrame(rows)
 
 

@@ -198,7 +198,8 @@ def verify(data_root: Path, n_images: int, seed: int) -> dict:
         if image.mode == "RGBA":
             min_alpha = min(min_alpha, image.getchannel("A").getextrema()[0])
     results.append(report(bad_size == 0, "patch size 96x96", f"{bad_size}/{len(sample)} wrong size"))
-    results.append(report(min_alpha >= 250, "alpha channel opaque", f"min alpha = {min_alpha} on {len(sample)} patches"))
+    results.append(report(min_alpha >= 250, "alpha channel opaque",
+                          f"min alpha = {min_alpha} on {len(sample)} patches"))
 
     return {"passed": all(results), "split_sizes": sizes, "n_patches": len(dataset)}
 

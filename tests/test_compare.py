@@ -14,7 +14,8 @@ def runs_root(tmp_path):
             folder = tmp_path / config / f"seed{seed}"
             folder.mkdir(parents=True)
             (folder / "metrics.json").write_text(json.dumps(fake_metrics(accuracy, epoch=0)))
-            pd.DataFrame({"epoch": [0], "id_val_acc": [0.9], "val_acc": [0.8]}).to_csv(folder / "history.csv", index=False)
+            history = pd.DataFrame({"epoch": [0], "id_val_acc": [0.9], "val_acc": [0.8]})
+            history.to_csv(folder / "history.csv", index=False)
     return tmp_path
 
 

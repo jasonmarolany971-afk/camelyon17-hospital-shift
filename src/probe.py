@@ -129,7 +129,8 @@ def main() -> int:
         if is_best:
             best_val_acc, best_epoch, best_state = row["val_acc"], epoch, copy.deepcopy(model.state_dict())
         print(f"epoch {epoch}: loss {row['train_loss']:.4f} | train acc {row['train_acc']:.4f} | "
-              f"id_val acc {row['id_val_acc']:.4f} | val acc {row['val_acc']:.4f}{'  <- best so far' if is_best else ''}")
+              f"id_val acc {row['id_val_acc']:.4f} | val acc {row['val_acc']:.4f}"
+              f"{'  <- best so far' if is_best else ''}")
     train_minutes = (time.time() - start) / 60
 
     checkpoint = {"model": best_state, "epoch": best_epoch, "val_acc": best_val_acc, "config": config,

@@ -1,7 +1,17 @@
 # Plan du projet — détection de métastases robuste au changement d'hôpital
 
-> Document de travail (en français). Version du 17 octobre 2026, à valider avant toute ligne de code d'entraînement.
-> Objectif : v1 publique (code, README, démo en ligne) **avant le 27 novembre 2026**.
+> **Archive : plan initial du 17 octobre 2026** (en français), conservé pour montrer la démarche ; les résultats
+> sont dans le [README](../README.md). Objectif : v1 publique (code, README, démo en ligne) avant le 27 novembre 2026.
+>
+> **État au 20 octobre 2026.** Phases 0 à 5 terminées. Phase 7 en cours : README et fiche du modèle générés depuis
+> `results/`, reproduction vérifiée. Phase 6 : application prête et vérifiée, hébergement en attente (Hugging Face
+> exige désormais un abonnement payant pour les applications Gradio).
+>
+> **Écarts par rapport au plan.** L'application utilise Phikon + tête linéaire, la meilleure méthode sur `val`, et
+> non le CNN. La tête linéaire est entraînée par SGD avec le protocole du CNN, ce qui donne un sens aux graines.
+> Augmentation HED légère ; Macenko appliqué patch par patch, référence calculée sur le train. Incertitude complétée
+> par un bootstrap qui re-tire les patients. Les prédictions sont versionnées pour reproduire toutes les analyses
+> sans GPU.
 
 ## 1. La question scientifique
 
@@ -37,7 +47,7 @@ On veut aussi savoir **quand le modèle doit s'abstenir** (renvoyer au pathologi
 4. **4 graines** par configuration (décision du 17 octobre : l'écart entre graines est énorme, et les deux GPU Kaggle font tourner les graines par paires pour le même quota), résultat = moyenne ± écart-type, valeurs par graine conservées.
 5. README honnête : développé avec l'aide de Claude Code ; limites explicites.
 
-## 4. Architecture du dépôt (cible)
+## 4. Architecture du dépôt (cible initiale ; structure finale dans le README)
 
 ```
 README.md, MODEL_CARD.md, LEARNING.md, PLAN.md
@@ -64,46 +74,47 @@ app/app.py                  # Gradio
 
 ## 5. Les phases
 
-### Phase 0 — Environnement et plan (en cours)
+### Phase 0 — Environnement et plan (terminée)
 Livrables : dépôt, structure, `src/check_env.py`, ce plan, `LEARNING.md`.
 
-### Phase 1 — Données et exploration
+### Phase 1 — Données et exploration (terminée)
 - Résoudre la source des données (serveur officiel ou copie vérifiée) ; **tu lances le téléchargement**.
 - `notebooks/01_exploration.ipynb` : nombre de patches par split et par hôpital, équilibre des classes, nombre de lames, grilles d'exemples par hôpital, histogrammes de couleur (RGB et espace HED) par hôpital.
 - Vérification importante : **des lames sont-elles partagées entre `train` et `id_val` ?** Si oui, `id_val` est optimiste (fuite au niveau lame) — à dire dans le README.
 - Figures sauvegardées dans `results/figures/`.
 
-### Phase 2 — CNN de référence + évaluation par hôpital
+### Phase 2 — CNN de référence + évaluation par hôpital (terminée)
 - `src/utils.py`, `src/data.py`, `src/train.py`, `src/evaluate.py`, `configs/cnn_none.yaml`.
 - Mini-banc d'essai chronométré (quelques centaines d'itérations) sur Mac et sur GPU cloud → estimation réelle du coût, puis décision.
 - Entraînement selon le protocole WILDS, sélection de l'époque sur `val`.
 - Évaluation : précision officielle (évaluateur `wilds`), AUC, sensibilité à spécificité fixée (seuil fixé sur `val`, proposition : spécificité 95 %), **par hôpital et globale**.
 - Graines 0 et 1 en parallèle (une par GPU), puis graines 2 et 3.
 
-### Phase 3 — Caractéristiques figées + classifieurs linéaires
+### Phase 3 — Caractéristiques figées + classifieurs linéaires (terminée)
 - Extraction **une seule fois** des caractéristiques de tous les patches pour 2 modèles, sauvegarde sur disque (`artifacts/features/`).
 - Modèles : Phikon (`owkin/phikon`, ViT-B/16 auto-supervisé sur de l'histologie TCGA ; **licence non commerciale**, à vérifier sur la fiche) contre un modèle ImageNet.
 - Décision à prendre en phase 3 : modèle ImageNet = **ViT-B/16 (DINO)**, même architecture que Phikon, donc seule la nature des données de pré-entraînement change (comparaison propre) ; ou **ResNet-50**, plus classique.
 - Piège identifié : une régression logistique est un problème convexe, donc relancer avec 3 graines donne 3 fois le même résultat. Il faudra donner un sens aux graines (tête linéaire entraînée par SGD, ou sous-échantillonnage) — on en discutera.
 - Autre limite à documenter : caractéristiques extraites une fois ⇒ pas d'augmentation de données possible.
 
-### Phase 4 — Couleur + graines multiples
+### Phase 4 — Couleur + graines multiples (terminée)
 - 3 conditions : aucune / augmentation HED (perturbation des canaux hématoxyline-éosine-DAB) / normalisation de Macenko (matrice de référence calculée **sur le train uniquement**).
 - 3 conditions × 4 graines = 12 entraînements CNN (les 4 de la phase 2 sont la condition « aucune »), par paires sur les deux T4.
 - Tableau final : moyenne ± écart-type, par hôpital.
 
-### Phase 5 — Calibration, abstention, erreurs, Grad-CAM
+### Phase 5 — Calibration, abstention, erreurs, Grad-CAM (terminée)
 - ECE (15 intervalles) + diagrammes de fiabilité ; *temperature scaling* ajusté sur `val`.
 - Courbe risque-couverture (confiance = probabilité max) ; seuil d'abstention de l'app choisi sur `val`.
 - Galeries des faux négatifs et faux positifs les plus confiants, par hôpital.
 - Grad-CAM sur le dernier bloc du DenseNet ; contrôle de bon sens : l'attention est-elle au centre (là où l'étiquette est définie) ?
 
-### Phase 6 — Application Gradio + Hugging Face Spaces
+### Phase 6 — Application Gradio + Hugging Face Spaces (application prête, hébergement en attente)
 - Dépôt d'image ou exemple par hôpital → probabilité, Grad-CAM, niveau de confiance.
 - « Review by a pathologist » sous le seuil choisi en phase 5 ; bandeau « Research tool, not a medical device ».
-- CPU gratuit : on déploie le CNN (léger) ; les exemples viennent du jeu CC0.
+- CPU gratuit : on déploie le CNN (léger) ; les exemples viennent du jeu CC0. *Finalement : Phikon + tête linéaire,
+  choisi sur `val` ; l'hébergement gratuit des applications Gradio a été supprimé par Hugging Face.*
 
-### Phase 7 — README, fiche du modèle, relecture
+### Phase 7 — README, fiche du modèle, relecture (en cours)
 - README : une phrase, lien de la démo, résultat clé (tiré de `results/`) … limites, licences, « Reproduce in 3 commands ».
 - `MODEL_CARD.md` : usage prévu, données, performances par hôpital, limites, éthique.
 - Relecture « comme un recruteur ».
@@ -126,11 +137,11 @@ Livrables : dépôt, structure, `src/check_env.py`, ce plan, `LEARNING.md`.
 - **Mac M4 (sans ventilateur)** : développement, tests sur petits sous-ensembles, exploration, classifieurs linéaires, évaluation, application. Un entraînement complet y serait long et le processeur ralentirait en chauffant.
 - **GPU cloud** : les 12 entraînements CNN et l'extraction des caractéristiques Phikon/ImageNet. Mesuré en phase 2 sur Kaggle (T4 x2) : environ 2 h 40 de session pour deux entraînements en parallèle, soit environ 16 h pour les 12 (quota : 30 h par semaine).
 
-## 8. Décisions à prendre maintenant
+## 8. Décisions prises en phase 0
 
-1. Gestionnaire d'environnement : **uv** (recommandé) ou **conda**.
-2. Plateforme GPU : **Kaggle** (recommandé) ou **Colab**.
-3. CNN de départ : **DenseNet-121 sans pré-entraînement, protocole WILDS** (recommandé) ou **ResNet-50 pré-entraîné ImageNet**.
+1. Gestionnaire d'environnement : **uv** (retenu) plutôt que conda.
+2. Plateforme GPU : **Kaggle** (retenu) plutôt que Colab.
+3. CNN de départ : **DenseNet-121 sans pré-entraînement, protocole WILDS** (retenu) plutôt qu'un ResNet-50 pré-entraîné.
 
 ## 9. Risques
 
@@ -139,5 +150,5 @@ Livrables : dépôt, structure, `src/check_env.py`, ce plan, `LEARNING.md`.
 | Serveur de téléchargement officiel cassé | copie vérifiée (comptes par split/hôpital, métadonnées) ; documenté dans le README |
 | Forte variance entre graines | 4 graines, valeurs par graine publiées, pas de conclusion sur des écarts < écart-type |
 | Quotas GPU gratuits | banc d'essai d'abord ; points de sauvegarde (checkpoints) pour reprendre une session coupée |
-| Licence Phikon non commerciale | mentionnée ; l'app publique n'utilise que le CNN |
+| Licence Phikon non commerciale | mentionnée dans le README, la fiche du modèle et l'application (démo non commerciale) |
 | Retard | plan B ci-dessus |

@@ -56,7 +56,8 @@ def long_table(runs: dict[int, dict]) -> pd.DataFrame:
                     records.append({"seed": seed, "split": split, "hospital": str(hospital),
                                     "metric": metric, "value": values[metric]})
         # How the model was selected on val, kept next to the results it produced.
-        for metric, value in (("selected_epoch", metrics["selected_epoch"]), ("threshold", metrics["threshold"]["value"])):
+        selection = (("selected_epoch", metrics["selected_epoch"]), ("threshold", metrics["threshold"]["value"]))
+        for metric, value in selection:
             records.append({"seed": seed, "split": "val", "hospital": "all", "metric": metric, "value": value})
     return pd.DataFrame(records)
 

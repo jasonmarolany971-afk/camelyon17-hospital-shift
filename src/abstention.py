@@ -191,7 +191,8 @@ def main() -> int:
     for name in args.names:
         parts = []
         for split in SPLITS:
-            full = curve_table[(curve_table.config == name) & (curve_table.split == split)].risk_full_coverage_mean.iloc[0]
+            rows = curve_table[(curve_table.config == name) & (curve_table.split == split)]
+            full = rows.risk_full_coverage_mean.iloc[0]
             r = cutoff_table[(cutoff_table.config == name) & (cutoff_table.rule == "coverage")
                              & (cutoff_table.target == 0.8) & (cutoff_table.split == split)].iloc[0]
             parts.append(f"{split} {full:.1%} -> {r.risk_mean:.1%} ({r.coverage_mean:.0%})")

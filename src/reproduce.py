@@ -12,7 +12,8 @@ figures byte for byte. The script fails if anything else differs.
 
 Not regenerated: results/benchmarks/ (hardware timings), results/data_provenance.json (rewritten by
 prepare_data with the check date) and the demo app files (they need the model weights). Grad-CAM needs
-the CNN weights in artifacts/runs/<name>/seed0/best.pt and runs only if they are there.
+the CNN weights in artifacts/runs/<name>/seed0/best.pt (python -m src.download_weights) and runs only if
+they are there.
 """
 
 import argparse
@@ -95,8 +96,8 @@ def main() -> int:
              ("Phase 4: Macenko reference", module("src.color", "reference")),
              ("Phase 4: color galleries and fallback rates", module("src.color", "gallery")),
              ("Phase 4: Macenko fallback and overflow rates", module("src.color", "check", "--n-patches", "9999"))]
-    steps += [(f"Phases 2-4: metrics of {run.parent.name}/{run.name}", module("src.evaluate", "--from-results", str(run)))
-              for run in runs]
+    steps += [(f"Phases 2-4: metrics of {run.parent.name}/{run.name}",
+               module("src.evaluate", "--from-results", str(run))) for run in runs]
     steps += [(f"Phases 2-4: summary of {c}", module("src.aggregate", c)) for c in CONFIGS]
     steps += [("Phases 2-4: comparison", module("src.compare", *CONFIGS)),
               ("Phase 5: calibration", module("src.calibration", *CONFIGS)),

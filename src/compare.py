@@ -31,7 +31,8 @@ DESCRIPTIONS = {
     "cnn_none": "CNN: DenseNet-121 trained from scratch.",
     "cnn_hed": "+ HED: stain augmentation (training only).",
     "cnn_macenko": "+ Macenko: stain normalization (every patch).",
-    "probe_dino_vitb16": "DINO, Phikon: frozen ViT-B/16 pretrained on natural images or on histology, linear layer on top.",
+    "probe_dino_vitb16": "DINO, Phikon: frozen ViT-B/16 pretrained on natural images or on histology, "
+                         "linear layer on top.",
 }
 DESCRIPTIONS["probe_phikon"] = DESCRIPTIONS["probe_dino_vitb16"]
 SPLIT_TITLES = {"id_val": "id_val (training hospitals)", "val": "val (hospital 1)", "test": "test (hospital 2)"}
@@ -93,7 +94,8 @@ def plot(long: pd.DataFrame, names: list[str], path: Path) -> None:
     fig.suptitle("One dot per seed, same scale for every method", x=0.01, ha="left", fontsize=11,
                  fontweight="bold", y=1.02)
     descriptions = list(dict.fromkeys(DESCRIPTIONS[n] for n in names if n in DESCRIPTIONS))
-    caption = " ".join(descriptions) + "\nEpoch and decision threshold selected on val only; test evaluated once per seed."
+    caption = (" ".join(descriptions)
+               + "\nEpoch and decision threshold selected on val only; test evaluated once per seed.")
     fig.text(0.01, -0.05, caption, color=INK_SOFT, fontsize=9)
     for ax in axes.flat:
         ax.tick_params(axis="x", colors=AXIS, labelcolor=INK_SOFT)

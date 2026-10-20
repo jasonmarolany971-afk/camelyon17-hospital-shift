@@ -2,6 +2,8 @@
 
 # Metastasis detection that survives a change of hospital
 
+[![tests](https://github.com/jasonmarolany971-afk/camelyon17-hospital-shift/actions/workflows/tests.yml/badge.svg)](https://github.com/jasonmarolany971-afk/camelyon17-hospital-shift/actions/workflows/tests.yml)
+
 A CNN trained on three hospitals to find breast-cancer metastases in lymph-node patches falls to
 {{acc_test_cnn_none}}% accuracy on a hospital it has never seen; normalizing stain colors brings it to
 {{acc_test_cnn_macenko}}%, on par with frozen pathology foundation models.
@@ -133,14 +135,14 @@ notebooks/    data exploration; Kaggle runner for GPU training
 results/      every table, figure and saved prediction behind this README
 app/          Gradio demo (Phikon + linear head), self-contained; MODEL_CARD.md describes its model
 tests/        unit tests (pytest)
-LEARNING.md   what each phase taught, with interview questions (in French)
+docs/         README and model card templates; the initial project plan (in French)
 ```
 
 ## How this project was built
 
 This project was developed with [Claude Code](https://claude.com/claude-code) (Anthropic) as a pair-programmer
 and mentor: each phase was planned, discussed and validated by the author, who can explain every line. The
-reasoning behind each choice is in [LEARNING.md](LEARNING.md).
+initial plan and its rigor rules are in [docs/plan.md](docs/plan.md).
 
 ## Limitations
 
@@ -170,5 +172,7 @@ python -m src.reproduce             # every table and figure from the saved pred
 ```
 
 The last command reruns every analysis (a few minutes on a laptop) and fails if a number differs from
-[results/](results/) by more than {{tolerance}} or a figure by a single byte. Retraining is documented in
-[notebooks/kaggle_runner.ipynb](notebooks/kaggle_runner.ipynb).
+[results/](results/) by more than {{tolerance}} or a figure by a single byte. The Grad-CAM figure also needs the
+trained CNN weights: `python -m src.download_weights` fetches those of seed 0 from the
+[GitHub release](https://github.com/jasonmarolany971-afk/camelyon17-hospital-shift/releases/tag/weights-seed0)
+and checks their hashes. Retraining is documented in [notebooks/kaggle_runner.ipynb](notebooks/kaggle_runner.ipynb).

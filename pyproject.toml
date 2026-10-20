@@ -1,0 +1,12 @@
+# Tool configuration only: the project is run from the repository root (python -m src.<module>), not installed.
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["notebooks"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

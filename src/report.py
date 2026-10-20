@@ -108,9 +108,10 @@ def collect(results: Path, app_card: Path) -> dict[str, str]:
 
     reference = json.loads((tables / "wilds_paper_reference.json").read_text())
     v["wilds_test"] = f"{pct(reference['test_accuracy_mean'])} ± {pct(reference['test_accuracy_std'])}"
-    minutes = sum(json.loads(p.read_text())["train_minutes"] for p in (results / "runs").glob("cnn_*/seed*/train_summary.json"))
+    cnn_summaries = list((results / "runs").glob("cnn_*/seed*/train_summary.json"))
+    minutes = sum(json.loads(p.read_text())["train_minutes"] for p in cnn_summaries)
     v["cnn_gpu_hours"] = f"{minutes / 60:.0f}"
-    v["n_cnn_runs"] = str(len(list((results / "runs").glob("cnn_*/seed*/train_summary.json"))))
+    v["n_cnn_runs"] = str(len(cnn_summaries))
 
     # Calibration
     calibration = pd.read_csv(tables / "calibration.csv")
@@ -153,18 +154,22 @@ def collect(results: Path, app_card: Path) -> dict[str, str]:
                                             for _, r in test_by_slide.iterrows())
     center = pd.read_csv(tables / "gradcam_center.csv").dropna(subset=["center_share_mean"])
     v["uniform_share"] = pct(center.uniform_share.iloc[0], 0)
-    v["gradcam_center_min"], v["gradcam_center_max"] = pct(center.center_share_mean.min(), 0), pct(center.center_share_mean.max(), 0)
-    v["macenko_overflow_rate"] = pct(json.loads((tables / "macenko_checks.json").read_text())["train"]["overflow_rate"], 2)
+    v["gradcam_center_min"] = pct(center.center_share_mean.min(), 0)
+    v["gradcam_center_max"] = pct(center.center_share_mean.max(), 0)
+    macenko_checks = json.loads((tables / "macenko_checks.json").read_text())
+    v["macenko_overflow_rate"] = pct(macenko_checks["train"]["overflow_rate"], 2)
 
     # Demo model (app/model/card.json, written by src/export_app.py)
     card = json.loads(app_card.read_text())
     v["app_seed"] = str(card["selection"]["chosen_seed"])
-    v["app_val_by_seed"] = ", ".join(f"seed {s}: {pct(a, 2)}%" for s, a in card["selection"]["val_accuracy_by_seed"].items())
+    by_seed = card["selection"]["val_accuracy_by_seed"]
+    v["app_val_by_seed"] = ", ".join(f"seed {s}: {pct(a, 2)}%" for s, a in by_seed.items())
     for split in ("id_val", "val", "test"):
         v[f"app_acc_{split}"] = pct(card["this_run"][split]["accuracy"])
         v[f"app_auc_{split}"] = f"{card['this_run'][split]['auc']:.3f}"
     v["app_temperature"] = f"{card['temperature']['value']:.2f}"
-    v["app_ece_test_before"], v["app_ece_test_after"] = (f"{x:.3f}" for x in card["temperature"]["ece_test_before_after"])
+    before, after = card["temperature"]["ece_test_before_after"]
+    v["app_ece_test_before"], v["app_ece_test_after"] = f"{before:.3f}", f"{after:.3f}"
     for split in ("val", "test"):
         referral = card["referral"][split]
         v[f"app_answered_{split}"] = pct(referral["answered"], 0)
@@ -174,7 +179,8 @@ def collect(results: Path, app_card: Path) -> dict[str, str]:
     v["app_max_gap"] = f"{app_checks['same_model']['max_abs_probability_gap']:.4f}"
     v["app_same_decisions"] = (f"{pct(app_checks['same_model']['same_decision_share'], 0)}% of decisions identical on "
                                f"{app_checks['same_model']['n_val_patches']} validation patches")
-    v["app_randomization"] = f"{app_checks['heat_map_randomization']['spearman_original_vs_random_last_block_mean']:.2f}"
+    randomization = app_checks["heat_map_randomization"]["spearman_original_vs_random_last_block_mean"]
+    v["app_randomization"] = f"{randomization:.2f}"
     return v
 
 

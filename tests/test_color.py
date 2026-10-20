@@ -2,8 +2,16 @@ import numpy as np
 import torch
 from PIL import Image
 
-from src.color import (HEDJitter, MacenkoNormalizer, estimate_stains, od_to_rgb, reconstruction_overflows, rgb_to_od,
-                       tissue_od, to_image)
+from src.color import (
+    HEDJitter,
+    MacenkoNormalizer,
+    estimate_stains,
+    od_to_rgb,
+    reconstruction_overflows,
+    rgb_to_od,
+    tissue_od,
+    to_image,
+)
 
 HEMATOXYLIN = np.array([0.65, 0.70, 0.29])
 EOSIN = np.array([0.07, 0.99, 0.11])

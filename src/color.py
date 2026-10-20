@@ -224,7 +224,9 @@ def make_gallery(args) -> None:
     axes[0, 0].set_title("original")
     axes[0, 1].set_title(f"HED jitter, sigma = {args.sigma} (five random draws)", loc="left")
     for ax in axes.flat:
-        ax.set_xticks([]); ax.set_yticks([]); ax.grid(False)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.grid(False)
         for spine in ax.spines.values():
             spine.set_visible(False)
     fig.savefig("results/figures/hed_light_examples.png")
@@ -246,7 +248,9 @@ def make_gallery(args) -> None:
         axes[0, 2 * k].set_title("original")
         axes[0, 2 * k + 1].set_title("Macenko")
     for ax in axes.flat:
-        ax.set_xticks([]); ax.set_yticks([]); ax.grid(False)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.grid(False)
         for spine in ax.spines.values():
             spine.set_visible(False)
     fig.savefig("results/figures/macenko_examples.png")

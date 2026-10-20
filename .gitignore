@@ -25,3 +25,6 @@ logs/
 
 # Claude Code local preview configuration
 .claude/
+
+# Personal learning notes, kept private (not published)
+LEARNING.md

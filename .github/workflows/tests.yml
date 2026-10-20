@@ -1,0 +1,27 @@
+# Runs on every push: lint, unit tests, and the check that README.md and MODEL_CARD.md match results/.
+# The dataset is not needed: the tests use synthetic data and the committed results.
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install (CPU-only PyTorch, then the project's requirements)
+        run: |
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt ruff==0.14.0
+      - name: Lint
+        run: ruff check .
+      - name: Unit tests
+        run: python -m pytest -q
+      - name: README and model card match results/
+        run: python -m src.report --check
