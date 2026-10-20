@@ -674,3 +674,34 @@ l'étiquette, ce qui est plausible puisqu'une zone tumorale dépasse en généra
 - Chaque carte est ramenée à son propre maximum : on compare des formes, pas des intensités.
 - Une carte de saillance n'est pas une explication du raisonnement du modèle. Un test de bon sens classique (Adebayo et
   al., 2018) vérifie que la carte change quand on remplace les poids par des poids aléatoires ; il n'a pas été fait ici.
+
+### Questions d'entretien
+
+**Q1. Votre outil affiche une probabilité de tumeur. Un médecin peut-il s'y fier dans un nouvel hôpital ?**
+*(EN: Your tool shows a tumor probability. Can a clinician rely on it in a new hospital?)*
+
+> Pas comme une probabilité exacte. J'ai mesuré la calibration par hôpital : l'erreur de calibration est surtout un
+> décalage propre à chaque hôpital, dans des directions opposées selon le modèle. Une température ajustée sur l'hôpital
+> de validation ne la corrige pas sur l'hôpital de test : pour le CNN normalisé, l'ECE passe même de 0,046 à 0,067.
+> Le classement se transporte mieux que la valeur : l'AUC reste à 0,986. L'outil présente donc ce nombre comme un score
+> de confiance, avec cet avertissement ; en déploiement, je recalibrerais sur quelques dizaines de cas étiquetés du
+> nouvel hôpital avant de m'y fier.
+
+**Q2. Comment avez-vous quantifié l'incertitude de vos résultats ?**
+*(EN: How did you quantify the uncertainty of your results?)*
+
+> Deux sources séparées. L'aléa d'entraînement : quatre graines par méthode, écart-type rapporté. Le choix des
+> patients : un bootstrap qui re-tire les patients de chaque hôpital, apparié entre méthodes, 2 000 tirages. Résultat :
+> l'avantage de la normalisation de Macenko sur l'augmentation HED résiste (+12,5 points, intervalle [2,9 ; 19,3]),
+> mais les trois meilleures méthodes sont indiscernables sur l'hôpital de test. Limites : 8 ou 9 patients par hôpital,
+> une lame qui contient 63 % des patches tumoraux du test, et surtout deux hôpitaux inconnus seulement.
+
+**Q3. À quoi sert l'option « à revoir par un pathologiste », et comment fixez-vous son seuil ?**
+*(EN: What is the "refer to a pathologist" option for, and how do you set its threshold?)*
+
+> Le modèle peut renvoyer ses patches les moins sûrs. Sur la courbe risque–couverture, renvoyer 20 % des patches, avec
+> un seuil réglé sur l'hôpital de validation, fait passer l'erreur sur l'hôpital de test de 6,5 à 2,2 % pour le CNN
+> normalisé et de 6,1 à 1,0 % pour Phikon. Mais une promesse d'erreur ne se transporte pas : un seuil réglé pour 2 %
+> d'erreur en validation donne 4,3 % sur le test pour Phikon. Je fixe donc le seuil par la part de cas renvoyés,
+> c'est-à-dire par la charge de travail acceptable, et je surveille l'erreur réelle sur place. Et l'abstention ne sauve
+> pas un modèle biaisé : le CNN sans couleur reste à 29,7 % d'erreur.
