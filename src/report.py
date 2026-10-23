@@ -54,6 +54,8 @@ def collect(results: Path, app_card: Path) -> dict[str, str]:
     test_patches = patches[patches.split == "test"]
     v["tumor_share_test"] = pct(test_patches.n_tumor.sum() / test_patches.n_patches.sum(), 0)
     v["n_slides"], v["n_patients"] = str(len(slides)), str(slides.patient.nunique())
+    with_tumor = int((slides.n_tumor > 0).sum())
+    v["slides_with_tumor"] = f"all {len(slides)}" if with_tumor == len(slides) else f"{with_tumor} of the {len(slides)}"
     for split, hospital in (("val", 1), ("test", 2)):
         v[f"n_patients_{split}"] = str(slides[slides.hospital == hospital].patient.nunique())
     test_slides = slides[slides.hospital == 2]

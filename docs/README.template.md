@@ -126,6 +126,18 @@ of the map against {{uniform_share}}% for a uniform map ([Grad-CAM](results/figu
   (largest gap {{app_max_gap}}); its heat map changes when the last block's weights are randomized (rank
   correlation {{app_randomization}}).
 
+## Next steps (v2)
+
+- **Separate pretraining from architecture:** train an ImageNet-pretrained DenseNet-121 with the same protocol,
+  and compare Phikon features with and without Macenko normalization.
+- **Slide maps:** place each patch's prediction at its coordinates on the slide, to compare predicted and annotated
+  tumor regions slide by slide.
+- **From patches to patients:** Camelyon17-WILDS cannot support slide-level classification, since
+  {{slides_with_tumor}} of its slides contain metastases. The next step is the original whole-slide
+  images (Camelyon16 and Camelyon17) with attention-based multiple-instance learning (AB-MIL, CLAM), to predict slide
+  labels and the patient's pN stage.
+- **External validation** on labeled lymph-node slides from other hospitals and recent scanners.
+
 ## Repository
 
 ```
