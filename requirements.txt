@@ -34,6 +34,9 @@ scikit-image>=0.24
 
 # Demo app (app/app.py; the Space has its own app/requirements.txt)
 gradio>=6.30
+onnx>=1.17               # in-browser demo export (src/export_web_demo.py)
+onnxscript>=0.5
+onnxruntime>=1.20        # checks of the exported model
 
 # Notebooks and tests
 ipykernel>=6.29

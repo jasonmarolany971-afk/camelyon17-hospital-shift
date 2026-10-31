@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Metastasis Detection Demo</title>
+<style>
+  :root {
+    --bg: #fcfcfb; --surface: #ffffff; --ink: #0b0b0b; --ink-soft: #52514e; --line: #e1e0d9;
+    --accent: #2a78d6; --amber: #eda100; --warn-bg: #fff4d6; --warn-ink: #6b4a00;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141413; --surface: #1d1d1b; --ink: #f2f1ec; --ink-soft: #b4b2a9; --line: #34332f;
+      --accent: #6aa5ec; --warn-bg: #3a2f12; --warn-ink: #f3d68a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  .disclaimer { font-weight: 600; margin: 0 0 20px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+  .card h2 { font-size: 1rem; margin: 0 0 10px; }
+  canvas { width: 100%; max-width: 288px; aspect-ratio: 1; image-rendering: auto; border-radius: 6px; display: block; }
+  .upload { display: inline-block; margin-top: 12px; padding: 8px 14px; border-radius: 8px; background: var(--accent);
+            color: #fff; cursor: pointer; font-weight: 600; }
+  .upload input { display: none; }
+  #verdict { font-size: 1.3rem; font-weight: 700; margin: 0 0 6px; }
+  #verdict.refer { color: var(--warn-ink); background: var(--warn-bg); padding: 6px 10px; border-radius: 8px; }
+  .muted { color: var(--ink-soft); font-size: 0.9rem; }
+  .bar { height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 6px 0 2px; }
+  .bar > div { height: 100%; background: var(--accent); width: 0; }
+  .examples { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+  .examples button { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px;
+                     padding: 6px; cursor: pointer; text-align: left; font-size: 0.78rem; }
+  .examples button:hover, .examples button:focus-visible { border-color: var(--accent); outline: none; }
+  .examples img { width: 100%; aspect-ratio: 1; border-radius: 4px; display: block; margin-bottom: 4px; }
+  section { margin-top: 24px; }
+  details { margin-top: 24px; }
+  summary { cursor: pointer; font-weight: 600; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Metastasis detection across hospitals</h1>
+  <p class="disclaimer">Research tool, not a medical device. Do not use for diagnosis.</p>
+
+  <div class="grid">
+    <div class="card">
+      <h2>H&amp;E lymph-node patch (96 x 96 pixels)</h2>
+      <canvas id="view" width="288" height="288" aria-label="Patch with heat map"></canvas>
+      <label class="upload">Upload a patch<input id="file" type="file" accept="image/*"></label>
+      <p class="muted" id="note"></p>
+    </div>
+    <div class="card" aria-live="polite">
+      <h2>Result</h2>
+      <p id="verdict">Loading the model…</p>
+      <div class="bar"><div id="bar"></div></div>
+      <p class="muted" id="score"></p>
+      <p class="muted">Amber cells push the decision towards "tumor" (Grad-CAM on the last block, 3 x 3 cells).
+        The white square is the central region the training labels describe.</p>
+    </div>
+  </div>
+
+  <section>
+    <h2>Examples</h2>
+    <p class="muted">One tumor and one normal patch per hospital, drawn at random; plus one patch the model refers
+      to a pathologist and one of its errors on the test hospital, also drawn at random.</p>
+    <div class="examples" id="examples"></div>
+  </section>
+
+  <details>
+    <summary>About this model</summary>
+    <div id="about"></div>
+  </details>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
