@@ -22,9 +22,9 @@ the two demos; the other methods of the project are compared in the [README](REA
   the validation hospital. Seed {{web_seed}}, chosen on the validation hospital (see Selection).
 - **Post-processing:** temperature {{web_temperature}}, fitted on the validation hospital; patches whose score is
   not confident enough are referred to a pathologist (cutoff chosen on the validation hospital).
-- **Explanation:** Grad-CAM on the last block (3 x 3 grid). Since the network ends with a ReLU, global average
-  pooling and a linear layer, Grad-CAM equals CAM (Zhou et al., 2016): the exported model computes the map
-  directly, without gradients.
+- **Explanation:** Grad-CAM of the decision z = logit(tumor) − logit(normal) on the last block (3 x 3 grid).
+  Since the network ends with a ReLU, global average pooling and a linear layer, Grad-CAM equals CAM (Zhou et al.,
+  2016): the exported model computes the map directly, without gradients.
 - **Format:** ONNX, run by ONNX Runtime Web in the visitor's browser; no image is sent anywhere.
 - **License:** MIT (code and weights).
 
@@ -100,7 +100,7 @@ validation hospital is below its method's mean on the test hospital ({{web_acc_t
   {{web_max_gap}}, {{web_same_decisions}};
   [results/tables/web_demo_checks.json](results/tables/web_demo_checks.json), rerun by
   `python -m src.check_web_demo`). A test checks that its heat map, computed without gradients, equals the
-  Grad-CAM of the analyses ([tests/test_web_demo.py](tests/test_web_demo.py)).
+  Grad-CAM of z computed with gradients by the code of the analyses ([tests/test_web_demo.py](tests/test_web_demo.py)).
 - **Local:** the demo reproduces the saved predictions of its run (largest probability gap {{app_max_gap}},
   {{app_same_decisions}}; [results/tables/app_checks.json](results/tables/app_checks.json)). Its heat map
   depends on the learned weights: with the last block randomized, its rank correlation with the original map
