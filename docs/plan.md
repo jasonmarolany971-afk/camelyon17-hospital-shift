@@ -3,12 +3,13 @@
 > **Archive : plan initial du 17 octobre 2026** (en français), conservé pour montrer la démarche ; les résultats
 > sont dans le [README](../README.md). Objectif : v1 publique (code, README, démo en ligne) avant le 27 novembre 2026.
 >
-> **État au 20 octobre 2026.** Phases 0 à 5 terminées. Phase 7 en cours : README et fiche du modèle générés depuis
-> `results/`, reproduction vérifiée. Phase 6 : application prête et vérifiée, hébergement en attente (Hugging Face
-> exige désormais un abonnement payant pour les applications Gradio).
+> **État au 31 octobre 2026.** Phases 0 à 5 terminées. Phase 6 : démo en ligne depuis le 31 octobre (CNN + HED
+> exporté en ONNX, exécuté dans le navigateur sur un Space statique gratuit) ; l'application Phikon reste locale,
+> car Hugging Face exige désormais un abonnement payant pour les applications Gradio. Phase 7 en cours : README et
+> fiche du modèle générés depuis `results/`, reproduction vérifiée.
 >
-> **Écarts par rapport au plan.** L'application utilise Phikon + tête linéaire, la meilleure méthode sur `val`, et
-> non le CNN. La tête linéaire est entraînée par SGD avec le protocole du CNN, ce qui donne un sens aux graines.
+> **Écarts par rapport au plan.** L'application locale utilise Phikon + tête linéaire, la meilleure méthode sur
+> `val`, et non le CNN ; la démo en ligne utilise bien un CNN (CNN + HED, le meilleur CNN sur `val`). La tête linéaire est entraînée par SGD avec le protocole du CNN, ce qui donne un sens aux graines.
 > Augmentation HED légère ; Macenko appliqué patch par patch, référence calculée sur le train. Incertitude complétée
 > par un bootstrap qui re-tire les patients. Les prédictions sont versionnées pour reproduire toutes les analyses
 > sans GPU.
@@ -108,11 +109,13 @@ Livrables : dépôt, structure, `src/check_env.py`, ce plan, `LEARNING.md`.
 - Galeries des faux négatifs et faux positifs les plus confiants, par hôpital.
 - Grad-CAM sur le dernier bloc du DenseNet ; contrôle de bon sens : l'attention est-elle au centre (là où l'étiquette est définie) ?
 
-### Phase 6 — Application Gradio + Hugging Face Spaces (application prête, hébergement en attente)
+### Phase 6 — Application Gradio + Hugging Face Spaces (démo en ligne ; application Phikon locale)
 - Dépôt d'image ou exemple par hôpital → probabilité, Grad-CAM, niveau de confiance.
 - « Review by a pathologist » sous le seuil choisi en phase 5 ; bandeau « Research tool, not a medical device ».
 - CPU gratuit : on déploie le CNN (léger) ; les exemples viennent du jeu CC0. *Finalement : Phikon + tête linéaire,
-  choisi sur `val` ; l'hébergement gratuit des applications Gradio a été supprimé par Hugging Face.*
+  choisi sur `val` ; l'hébergement gratuit des applications Gradio a été supprimé par Hugging Face. La démo en
+  ligne exécute donc dans le navigateur le meilleur CNN sur `val` (CNN + HED), exporté en ONNX : l'application
+  Phikon reste locale.*
 
 ### Phase 7 — README, fiche du modèle, relecture (en cours)
 - README : une phrase, lien de la démo, résultat clé (tiré de `results/`) … limites, licences, « Reproduce in 3 commands ».

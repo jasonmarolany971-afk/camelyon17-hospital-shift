@@ -5,9 +5,9 @@ Usage (from the repository root):
     python -m src.report --check   # exit 1 if either is not what the templates and results/ give
 
 The templates (docs/*.template.md) contain the text; each number is a tag such as
-{{acc_test_cnn_macenko}}, filled here from the files of results/ (and app/model/card.json for
-the demo model). A test runs --check, so a README number can neither be typed by hand nor
-become stale.
+{{acc_test_cnn_macenko}}, filled here from the files of results/ (and app/model/card.json and
+web/settings.json for the two demo models). A test runs --check, so a README number can neither be
+typed by hand nor become stale.
 """
 
 import argparse
@@ -41,7 +41,23 @@ def signed(x: float) -> str:
     return f"{100 * x:+.1f}"
 
 
-def collect(results: Path, app_card: Path) -> dict[str, str]:
+def demo_values(prefix: str, selection: dict, run: dict) -> dict[str, str]:
+    """Seed choice, accuracy, AUC and referral of a demo model (app/model/card.json or web/settings.json)."""
+    by_seed = selection["val_accuracy_by_seed"]
+    v = {f"{prefix}_seed": str(selection["chosen_seed"]),
+         f"{prefix}_val_by_seed": ", ".join(f"seed {s}: {pct(a, 2)}%" for s, a in by_seed.items())}
+    for split in ("id_val", "val", "test"):
+        v[f"{prefix}_acc_{split}"] = pct(run["this_run"][split]["accuracy"])
+        v[f"{prefix}_auc_{split}"] = f"{run['this_run'][split]['auc']:.3f}"
+    for split in ("val", "test"):
+        referral = run["referral"][split]
+        v[f"{prefix}_answered_{split}"] = pct(referral["answered"], 0)
+        v[f"{prefix}_error_answered_{split}"] = pct(referral["error_when_answered"])
+        v[f"{prefix}_error_all_{split}"] = pct(referral["error_without_referral"])
+    return v
+
+
+def collect(results: Path, app_card: Path, web_settings: Path) -> dict[str, str]:
     tables = results / "tables"
     v: dict[str, str] = {}
 
@@ -161,28 +177,37 @@ def collect(results: Path, app_card: Path) -> dict[str, str]:
     macenko_checks = json.loads((tables / "macenko_checks.json").read_text())
     v["macenko_overflow_rate"] = pct(macenko_checks["train"]["overflow_rate"], 2)
 
-    # Demo model (app/model/card.json, written by src/export_app.py)
+    # Local demo model (app/model/card.json, written by src/export_app.py)
     card = json.loads(app_card.read_text())
-    v["app_seed"] = str(card["selection"]["chosen_seed"])
-    by_seed = card["selection"]["val_accuracy_by_seed"]
-    v["app_val_by_seed"] = ", ".join(f"seed {s}: {pct(a, 2)}%" for s, a in by_seed.items())
-    for split in ("id_val", "val", "test"):
-        v[f"app_acc_{split}"] = pct(card["this_run"][split]["accuracy"])
-        v[f"app_auc_{split}"] = f"{card['this_run'][split]['auc']:.3f}"
+    v.update(demo_values("app", card["selection"], card))
     v["app_temperature"] = f"{card['temperature']['value']:.2f}"
     before, after = card["temperature"]["ece_test_before_after"]
     v["app_ece_test_before"], v["app_ece_test_after"] = f"{before:.3f}", f"{after:.3f}"
-    for split in ("val", "test"):
-        referral = card["referral"][split]
-        v[f"app_answered_{split}"] = pct(referral["answered"], 0)
-        v[f"app_error_answered_{split}"] = pct(referral["error_when_answered"])
-        v[f"app_error_all_{split}"] = pct(referral["error_without_referral"])
     app_checks = json.loads((tables / "app_checks.json").read_text())
     v["app_max_gap"] = f"{app_checks['same_model']['max_abs_probability_gap']:.4f}"
     v["app_same_decisions"] = (f"{pct(app_checks['same_model']['same_decision_share'], 0)}% of decisions identical on "
                                f"{app_checks['same_model']['n_val_patches']} validation patches")
     randomization = app_checks["heat_map_randomization"]["spearman_original_vs_random_last_block_mean"]
     v["app_randomization"] = f"{randomization:.2f}"
+
+    # Online demo model (web/settings.json, written by src/export_web_demo.py): the documents call it the best CNN
+    # on the validation hospital, so that must still be true
+    web = json.loads(web_settings.read_text())
+    config = web["model"]["config"]
+    best_cnn = max((c for c in CONFIGS if c.startswith("cnn_")), key=lambda c: comparison.loc[(c, "val")].accuracy_mean)
+    if config != best_cnn:
+        raise ValueError(f"The online demo runs {config}, but the best CNN on val is {best_cnn}: "
+                         "export that one with src/export_web_demo.py")
+    v.update(demo_values("web", web["model"], web))
+    v["web_method"] = NAMES[config]
+    v["web_method_acc_test"], v["web_method_ci_test"] = v[f"acc_test_{config}"], v[f"ci_test_{config}"]
+    v["web_temperature"] = f"{web['temperature']:.2f}"
+    before, after = web["ece_test_before_after"]
+    v["web_ece_test_before"], v["web_ece_test_after"] = f"{before:.3f}", f"{after:.3f}"
+    web_checks = json.loads((tables / "web_demo_checks.json").read_text())["same_model"]
+    v["web_max_gap"] = f"{web_checks['max_abs_probability_gap']:.1e}".replace("e-0", "e-")  # 2.5e-6
+    v["web_same_decisions"] = (f"{pct(web_checks['same_decision_share'], 0)}% of decisions identical on "
+                               f"{web_checks['n_val_patches']} validation patches")
     return v
 
 
@@ -199,7 +224,7 @@ def main() -> int:
     parser.add_argument("--check", action="store_true", help="Only check that both files are up to date.")
     args = parser.parse_args()
 
-    values = collect(Path("results"), Path("app/model/card.json"))
+    values = collect(Path("results"), Path("app/model/card.json"), Path("web/settings.json"))
     stale = []
     for document, template in DOCUMENTS.items():
         text = render(Path(template), values)
