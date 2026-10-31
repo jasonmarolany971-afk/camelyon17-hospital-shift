@@ -1,0 +1,106 @@
+{
+  "run": "cnn_hed/seed2",
+  "same_model": {
+    "n_val_patches": 200,
+    "max_abs_probability_gap": 2.5033950805664062e-06,
+    "same_decision_share": 1.0
+  },
+  "examples": [
+    {
+      "file": "hospital0_tumor.png",
+      "label": "tumor",
+      "z": 4.755820274353027,
+      "referred": false,
+      "predicted": "tumor",
+      "cam_max": 0.6516000032424927
+    },
+    {
+      "file": "hospital0_normal.png",
+      "label": "normal",
+      "z": -3.752647876739502,
+      "referred": false,
+      "predicted": "normal",
+      "cam_max": 0.0
+    },
+    {
+      "file": "hospital1_tumor.png",
+      "label": "tumor",
+      "z": 5.3116302490234375,
+      "referred": false,
+      "predicted": "tumor",
+      "cam_max": 0.7076926827430725
+    },
+    {
+      "file": "hospital1_normal.png",
+      "label": "normal",
+      "z": -4.388350486755371,
+      "referred": false,
+      "predicted": "normal",
+      "cam_max": 0.0
+    },
+    {
+      "file": "hospital2_tumor.png",
+      "label": "tumor",
+      "z": 3.1810755729675293,
+      "referred": false,
+      "predicted": "tumor",
+      "cam_max": 0.5185403823852539
+    },
+    {
+      "file": "hospital2_normal.png",
+      "label": "normal",
+      "z": -3.855395793914795,
+      "referred": false,
+      "predicted": "normal",
+      "cam_max": 0.0
+    },
+    {
+      "file": "hospital3_tumor.png",
+      "label": "tumor",
+      "z": 5.485082149505615,
+      "referred": false,
+      "predicted": "tumor",
+      "cam_max": 0.7503834366798401
+    },
+    {
+      "file": "hospital3_normal.png",
+      "label": "normal",
+      "z": -2.0322556495666504,
+      "referred": true,
+      "predicted": "normal",
+      "cam_max": 0.0
+    },
+    {
+      "file": "hospital4_tumor.png",
+      "label": "tumor",
+      "z": 2.605356216430664,
+      "referred": false,
+      "predicted": "tumor",
+      "cam_max": 0.46891698241233826
+    },
+    {
+      "file": "hospital4_normal.png",
+      "label": "normal",
+      "z": -4.164463043212891,
+      "referred": false,
+      "predicted": "normal",
+      "cam_max": 0.0
+    },
+    {
+      "file": "hospital1_referred.png",
+      "label": "normal",
+      "z": -0.2210414558649063,
+      "referred": true,
+      "predicted": "normal",
+      "cam_max": 0.3537696599960327
+    },
+    {
+      "file": "hospital2_error.png",
+      "label": "tumor",
+      "z": -3.2172489166259766,
+      "referred": false,
+      "predicted": "normal",
+      "cam_max": 0.0
+    }
+  ]
+}

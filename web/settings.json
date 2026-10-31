@@ -1,0 +1,178 @@
+{
+  "model": {
+    "config": "cnn_hed",
+    "description": "DenseNet-121 trained from scratch with HED stain augmentation",
+    "chosen_seed": 2,
+    "val_accuracy_by_seed": {
+      "0": 0.8871762752532959,
+      "1": 0.8977481126785278,
+      "2": 0.9124742150306702,
+      "3": 0.8994957804679871
+    },
+    "selected_epoch": 8,
+    "rule": "cnn_hed: best CNN on val accuracy (mean of 4 seeds); seed: highest val accuracy. Test never used to choose."
+  },
+  "input": {
+    "size": 96,
+    "mean": [
+      0.485,
+      0.456,
+      0.406
+    ],
+    "std": [
+      0.229,
+      0.224,
+      0.225
+    ]
+  },
+  "temperature": 1.1725881598503662,
+  "referral_abs_logit": 2.4576854148919236,
+  "referral": {
+    "val": {
+      "answered": 0.800022920009168,
+      "error_when_answered": 0.03069044549491477,
+      "error_without_referral": 0.08752578501031401
+    },
+    "test": {
+      "answered": 0.7038352105721072,
+      "error_when_answered": 0.12287852465588668,
+      "error_without_referral": 0.2116185011874809
+    }
+  },
+  "this_run": {
+    "id_val": {
+      "accuracy": 0.9474672228843862,
+      "auc": 0.994409907584466
+    },
+    "val": {
+      "accuracy": 0.912474214989686,
+      "auc": 0.9752599172641778
+    },
+    "test": {
+      "accuracy": 0.7883814988125191,
+      "auc": 0.9199666476887851
+    }
+  },
+  "method_test_accuracy_mean_over_seeds": 0.8095210101817668,
+  "method_test_accuracy_ci95_over_patients": [
+    0.737077815746061,
+    0.8891480285341319
+  ],
+  "ece_test_before_after": [
+    0.15899934266873095,
+    0.150943516820248
+  ],
+  "examples": [
+    {
+      "index": 25318,
+      "hospital": 0,
+      "split": "train",
+      "role": "training",
+      "label": "tumor",
+      "slide": 8,
+      "file": "hospital0_tumor.png"
+    },
+    {
+      "index": 246879,
+      "hospital": 0,
+      "split": "train",
+      "role": "training",
+      "label": "normal",
+      "slide": 9,
+      "file": "hospital0_normal.png"
+    },
+    {
+      "index": 38638,
+      "hospital": 1,
+      "split": "val",
+      "role": "validation (unseen in training)",
+      "label": "tumor",
+      "slide": 13,
+      "file": "hospital1_tumor.png"
+    },
+    {
+      "index": 262403,
+      "hospital": 1,
+      "split": "val",
+      "role": "validation (unseen in training)",
+      "label": "normal",
+      "slide": 11,
+      "file": "hospital1_normal.png"
+    },
+    {
+      "index": 60261,
+      "hospital": 2,
+      "split": "test",
+      "role": "test (unseen)",
+      "label": "tumor",
+      "slide": 28,
+      "file": "hospital2_tumor.png"
+    },
+    {
+      "index": 276889,
+      "hospital": 2,
+      "split": "test",
+      "role": "test (unseen)",
+      "label": "normal",
+      "slide": 27,
+      "file": "hospital2_normal.png"
+    },
+    {
+      "index": 94592,
+      "hospital": 3,
+      "split": "train",
+      "role": "training",
+      "label": "tumor",
+      "slide": 38,
+      "file": "hospital3_tumor.png"
+    },
+    {
+      "index": 318753,
+      "hospital": 3,
+      "split": "train",
+      "role": "training",
+      "label": "normal",
+      "slide": 36,
+      "file": "hospital3_normal.png"
+    },
+    {
+      "index": 167458,
+      "hospital": 4,
+      "split": "train",
+      "role": "training",
+      "label": "tumor",
+      "slide": 48,
+      "file": "hospital4_tumor.png"
+    },
+    {
+      "index": 442298,
+      "hospital": 4,
+      "split": "train",
+      "role": "training",
+      "label": "normal",
+      "slide": 44,
+      "file": "hospital4_normal.png"
+    },
+    {
+      "index": 270950,
+      "hospital": 1,
+      "split": "val",
+      "role": "validation (unseen in training)",
+      "label": "normal",
+      "slide": 19,
+      "kind": "referred",
+      "file": "hospital1_referred.png"
+    },
+    {
+      "index": 84132,
+      "hospital": 2,
+      "split": "test",
+      "role": "test (unseen)",
+      "label": "tumor",
+      "slide": 29,
+      "kind": "error",
+      "file": "hospital2_error.png"
+    }
+  ],
+  "code_commit": "e3d6caa"
+}
