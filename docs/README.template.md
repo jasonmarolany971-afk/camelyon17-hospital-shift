@@ -179,7 +179,10 @@ initial plan and its rigor rules are in [docs/plan.md](docs/plan.md).
 ## Licenses
 
 - Code and trained weights: [MIT](LICENSE).
-- Data: Camelyon17 (CC0 1.0), through the Camelyon17-WILDS release and a pinned Hugging Face mirror.
+- Data: Camelyon17, through the Camelyon17-WILDS release and a pinned Hugging Face mirror. Its license is stated
+  inconsistently: CC0 1.0 on the WILDS site and the challenge's Data page, but CC BY-NC-ND 4.0 on the challenge's
+  [Download page](https://camelyon17.grand-challenge.org/Download/). This project is non-commercial research and
+  teaching; check with the organizers before any commercial use of the data or of the weights trained on it.
 - Phikon weights: Owkin non-commercial license (used by the local demo). DINO weights: Apache-2.0.
 
 ## Reproduce in 3 commands

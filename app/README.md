@@ -30,7 +30,9 @@ Everything in this Space is produced by `python -m src.export_app` in that repos
 
 ## Licenses
 
-- Data: Camelyon17 (CC0 1.0); example patches come from the Camelyon17-WILDS release.
+- Data: Camelyon17; example patches come from the Camelyon17-WILDS release. Its license is stated
+  inconsistently (CC0 1.0 on the WILDS site, CC BY-NC-ND 4.0 on the challenge's Download page): use it for
+  non-commercial research and education only.
 - Phikon weights (downloaded at start-up, pinned revision): Owkin non-commercial license. This demo
   is for non-commercial research and education only.
 - Code: see the project repository.

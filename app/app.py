@@ -155,7 +155,8 @@ of patches and its error drops from {referral["test"]["error_without_referral"]:
 hospital (expected calibration error on the test hospital {CARD["temperature"]["ece_test_before_after"][1]:.3f}).
 Patches only, not whole slides. Labels come from hand-drawn contours and are themselves imperfect.
 
-**Licenses.** Data: Camelyon17 (CC0). Phikon weights: Owkin non-commercial license, so this demo is for
+**Licenses.** Data: Camelyon17 (CC0 1.0 according to WILDS, CC BY-NC-ND 4.0 according to the challenge's
+Download page). Phikon weights: Owkin non-commercial license, so this demo is for
 non-commercial research and education only. Code and full analysis: [GitHub]({REPO_URL}).
 """
 
