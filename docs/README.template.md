@@ -156,7 +156,11 @@ docs/         README and model card templates; the initial project plan (in Fren
 ## How this project was built
 
 This project was developed with [Claude Code](https://claude.com/claude-code) (Anthropic) as a pair-programmer
-and mentor: each phase was planned, discussed and validated by the author, who can explain every line. The
+and mentor. I framed the project and its evaluation rules (the test set never drives a choice, every reported
+number comes from an actual run), made the call at each step (comparison backbone, stain normalization, four
+seeds, Phikon for the local demo, v2 postponed) and ran the experiments myself, from data download and feature
+extraction to the Kaggle GPU training runs. Claude Code wrote most of the code, tests, figures and documentation,
+and laid out the options I chose from; I am now going through it file by file to own every part of it. The
 initial plan and its rigor rules are in [docs/plan.md](docs/plan.md).
 
 ## Limitations
